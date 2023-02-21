@@ -4,8 +4,6 @@ This file holds the code for setting up the source space as well as the boundary
 To set up source space FreeSurfer was initially used for MRI reconstruction. 
 See https://mne.tools/stable/auto_tutorials/forward/10_background_freesurfer.html#tut-freesurfer-reconstruction
 '''
-import sys
-sys.path.append('/home/laurap/.local/bin')
 import mne
 
 src = mne.setup_source_space('subj1', spacing='oct6', subjects_dir='/media/8.1/francescas_data/mri')
