@@ -47,7 +47,7 @@ def main(filepath):
     del cropped
 
 
-    ### resampling ###
+    ### RESAMPLING ###
     resampled_raw = filt_raw.copy().resample(250)
     del filt_raw
 
