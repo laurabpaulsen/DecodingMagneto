@@ -16,7 +16,7 @@ def generate_events_files(epoch_path):
         events = epochs.events
         events = events[:, 2]
 
-        with open(os.path.join('..', 'info_files', 'events', f'{file.split("-epo.fif")[0]}_events.pkl'), 'wb') as f:
+        with open(os.path.join('events', f'{file.split("-epo.fif")[0]}_events.pkl'), 'wb') as f:
             pkl.dump(events, f)
 
 
