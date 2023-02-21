@@ -1,4 +1,5 @@
 import json
+import pickle as pkl
 
 ### CREATE EVENT LIST ###
 event_list = {
@@ -132,7 +133,7 @@ with open('event_ids.txt', 'w') as f:
 # Bad channels found by visual inspection of MEG signal
 # Noise components determined through visual inspection of spatial map, time course and spectrum (in notebook check_ica)
 file_list = {
-     'memory_01.fif': {'bad_channels': ['MEG0422', 'MEG1423', 'MEG2513', 'MEG2613', 'MEG1341', 'MEG1831'], 'date': 'xxxxx', 'noise_components': [0, 15, 17], 'tmin': 7, 'tmax': 1537},
+     'memory_01.fif': {'bad_channels': ['MEG0422', 'MEG1423', 'MEG2513', 'MEG2613', 'MEG1341', 'MEG1831'], 'noise_components': [0, 15, 17], 'tmin': 7, 'tmax': 1537},
      'memory_02.fif': {'bad_channels': ['MEG0422', 'MEG0413', 'MEG1423', 'MEG2533'], 'noise_components':[0, 18, 20], 'tmin':55, 'tmax': 1559},
      'memory_03.fif': {'bad_channels': ['MEG0422', 'MEG1423', 'MEG0921', 'MEG0811'], 'noise_components': [1,11,12], 'tmin': 9, 'tmax': 743.5},
      'memory_04.fif': {'bad_channels': ['MEG1222', 'MEG0422', 'MEG1423', 'MEG2613', 'MEG0811', 'MEG0921', 'MEG2413'], 'noise_components': [4, 8, 10], 'tmin':8, 'tmax':758},
@@ -199,3 +200,11 @@ file_list = {
 print(file_list)
 with open('session_info.txt', 'w') as f:
      f.write(json.dumps(file_list))
+
+
+# make a list and save it to a file
+sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
+
+filehandler = open('sessions.pkl', 'wb')
+pkl.dump(sessions, filehandler)
+filehandler.close()
