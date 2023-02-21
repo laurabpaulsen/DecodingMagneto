@@ -12,9 +12,9 @@ import numpy as np
 import nibabel as nib
 
 def get_hpi_meg(epochs):
-    hpi_coil_pos = np.array([dig['r'] for dig in epochs.info['hpi_results'][0]['dig_points']]) # not 100 percent sure these are the right ones  
+    hpi_coil_pos = np.array([dig['r'] for dig in epochs.info['hpi_results'][0]['dig_points']])
     
-    # order of hpi coils is different in MEG and mri space, so we need to reorder them
+    # order of hpi coils is different in MEG and mri space, they are reordered here to match
     hpi_coil_pos[[0, 1, 2, 3]] = hpi_coil_pos[[2, 3, 1, 0]]
     
     return hpi_coil_pos
@@ -44,8 +44,8 @@ def rot3dfit(A, B):
     centroid_A = centroid_A.reshape(-1, 1)
     centroid_B = centroid_B.reshape(-1, 1)
 
-    # to find the optimal rotation we first re-centre both dataset 
-    # so that both centroids are at the origin (subtract mean)
+    # to find the optimal rotation both points are recentred
+    # then both centroids are at the origin (subtract mean)
     Ac = A - centroid_A
     Bc = B - centroid_B
 
@@ -53,9 +53,9 @@ def rot3dfit(A, B):
     H = Ac @ Bc.T
     U, S, V = np.linalg.svd(H)
     R = V.T @ U.T
-    
+
+    # account for reflection
     if np.linalg.det(R) < 0:
-        print("det(R) < R, reflection detected!, correcting for it ...")
         V[2,:] *= -1
         R = V.T @ U.T
 
@@ -134,7 +134,7 @@ def transform_geometry(epochs, hpi_mri, image_nii):
 
 
     # This transformation is used to go from MRI to freesurfer space
-    trans = freesurfer_to_mri(image_nii=image_nii)
+    trans = freesurfer_to_mri(image_nii = image_nii)
     trans[:3, -1] = trans[:3, -1]/1000
     epochs.info['dev_head_t']['trans'] = trans
 
@@ -149,7 +149,7 @@ def transform_geometry(epochs, hpi_mri, image_nii):
         rot_coils = np.array([location[3:6], location[6:9], location[9:12]])
         rot_coils = rot_coils @ R.T
         
-        location[3:12] = rot_coils.flatten() # check if this is correct
+        location[3:12] = rot_coils.flatten()
 
         if i ==305:
             break
@@ -179,13 +179,13 @@ def main(session):
     np.save(f'/media/8.1/final_data/laurap/source_space/sources/{session}_source', stcs_array)
 
     # Labels for cortical parcellation
-    parc = 'aparc.a2009s' #parcellation to use
-    labels_parc = mne.read_labels_from_annot(subject, parc=parc, subjects_dir=subject_dir)
-    # Average the source estimates within each label of the cortical parcellation
-    # and each sub-structure contained in the source space.
-    src = inv['src']
-    label_time_course = mne.extract_label_time_course(stcs, labels_parc, src, mode='mean_flip')
-    np.save(f'/media/8.1/final_data/laurap/source_space/parcelled/{session}_parcelled', label_time_course)
+    for parc in ['aparc.a2009s', 'aparc', 'aparc.DKTatlas']: #
+        labels_parc = mne.read_labels_from_annot(subject, parc=parc, subjects_dir=subject_dir)
+        # Average the source estimates within each label of the cortical parcellation
+        # and each sub-structure contained in the source space.
+        src = inv['src']
+        label_time_course = mne.extract_label_time_course(stcs, labels_parc, src, mode='pca_flip')
+        np.save(f'/media/8.1/final_data/laurap/source_space/parcelled/{parc}/{session}_parcelled', label_time_course)
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
