@@ -8,29 +8,31 @@ Dev notes:
     - [ ] aparc.a2009s
     - [ ] aparc.DKTatlas
     - [ ] sens
-- [ ] add argsparser, so that you can run the script from the command line
-- [ ] create bash script to run the script for all parcellations and sensor space
 - [ ] document the script properly
 - [ ] improve code after if name in main (perhaps create functions for some of the code)
 - [ ] load session info from file instead of hardcoding it
-- [ ] figure out if we need to try and optimise alpha
 - [X] sign-flip!!!
+
+maybe add:
+- [ ] argsparser, so that you can run the script from the command line
+- [ ] bash script to run the script for all parcellations and sensor space
+- [ ] move get accuracy function to utils.analysis.decoder??
+
 """
 
 import sys
-sys.path.append('..')
-sys.path.append('../..')
-sys.path.append('../../..')
+import pathlib
+sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
-from decoder_animacy import Decoder
+
 import numpy as np
 import os
 import multiprocessing as mp
-import argparse as ap
+
 
 from utils.data_prep.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
 from utils.data_prep.triggers import get_triggers_equal, convert_triggers_animate_inanimate
-
+from utils.analysis.decoder import Decoder
 
 classification = True
 ncv = 10
@@ -38,7 +40,7 @@ alpha = 'auto'
 model_type = 'LDA' # can be either LDA, SVM or RidgeClassifier
 get_tgm = True
 parc = 'aparc' # can be either aparc, aparc.a2009s, aparc.DKTatlas or sens
-ncores = 8 # mp.cpu_count()
+ncores = 4 # mp.cpu_count()
 output_path = os.path.join('accuracies', f'cross_decoding_{ncv}_{model_type}_{parc}.npy')
 
 
@@ -72,24 +74,12 @@ def get_accuracy(input:tuple, classification=classification, ncv=ncv):
         y_test = ys[session_test]
 
         accuracy = decoder.run_decoding_across_sessions(X_train, y_train, X_test, y_test)
+    
     print(f'Index {idx} done')
 
     return session_train, session_test, accuracy
 
 if __name__ == '__main__':
-    #parser = ap.ArgumentParser()
-    #parser.add_argument('-c', '--classification', type=bool, default=True, help='whether to perform classification or regression')
-    #parser.add_argument('-n', '--ncv', type=int, default=10, help='number of cross validation folds')
-    #parser.add_argument('-p', '--parc', type=str, default='parc', help='parcellation to use, can be either aparc, aparc.a2009s, aparc.DKTatlas or sens')
-    #parser.add_argument('-a', '--alpha', default='auto', help='alpha value to use for regularization') # would not work if a int is passed, fix!
-
-    #args = parser.parse_args()
-
-    # checks if parcellation is valid
-    #if args.parc not in ['aparc', 'aparc.a2009s', 'aparc.DKTatlas', 'sens']:
-    #    raise ValueError('Invalid parcellation, must be either aparc, aparc.a2009s, aparc.DKTatlas or sens')
-
-
     print('Running cross decoding with the following parameters...')
     print(f'Classification: {classification}')
     print(f'Number of cross validation folds: {ncv}')
@@ -111,21 +101,31 @@ if __name__ == '__main__':
             sesh = [f'{i}-epo.fif' for i in sesh] # WITH ICA - should it be without?
             X, y = read_and_concate_sessions(sesh, triggers)
         else:
-            X, y = read_and_concate_sessions_source(path, event_path, sesh, triggers, sign_flip = True)
+            X, y = read_and_concate_sessions_source(path, event_path, sesh, triggers)
         
         y = convert_triggers_animate_inanimate(y) # converting triggers to animate and inanimate instead of images
 
         Xs.append(X)
         ys.append(y)
     
-    # sign flipping for concatenated sessions 
-    Xs = [flip_sign(Xs[0], X) for X in Xs]
+    # sign flipping for concatenated data (source space only)
+    # 
+    if parc != 'sens': 
+        Xs = [flip_sign(Xs[0], X) for X in Xs]
 
+    # print number of trials for each X
+    for X in Xs:
+        print(X.shape[1])
+
+
+    # preparing decoding inputs for multiprocessing
     decoding_inputs = [(train_sesh, test_sesh, idx) for idx, train_sesh in enumerate(range(len(Xs))) for test_sesh in range(len(Xs))]
 
     T, N, C = Xs[0].shape
 
+    # empty array to store accuracies in
     accuracies = np.zeros((len(Xs), len(Xs), T, T), dtype=float)
+
     
     with mp.Pool(ncores) as p:
         for train_session, test_session, accuracy in p.map(get_accuracy, decoding_inputs):
@@ -140,5 +140,19 @@ if __name__ == '__main__':
 
     np.save(output_path, accuracies)
     
+
+
+# argparse old version
+    #parser = ap.ArgumentParser()
+    #parser.add_argument('-c', '--classification', type=bool, default=True, help='whether to perform classification or regression')
+    #parser.add_argument('-n', '--ncv', type=int, default=10, help='number of cross validation folds')
+    #parser.add_argument('-p', '--parc', type=str, default='parc', help='parcellation to use, can be either aparc, aparc.a2009s, aparc.DKTatlas or sens')
+    #parser.add_argument('-a', '--alpha', default='auto', help='alpha value to use for regularization') # would not work if a int is passed, fix!
+
+    #args = parser.parse_args()
+
+    # checks if parcellation is valid
+    #if args.parc not in ['aparc', 'aparc.a2009s', 'aparc.DKTatlas', 'sens']:
+    #    raise ValueError('Invalid parcellation, must be either aparc, aparc.a2009s, aparc.DKTatlas or sens')
 
     
