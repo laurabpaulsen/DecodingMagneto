@@ -19,21 +19,12 @@ Regardless of the condition, no behavioral data was collected.
 │   │    ├── plots                      
 │   │    └── cross_decoding.py          
 │   ├── condition                       <- Decoding between conditions (memory vs. no memory)
-│   │    ├── accuracies
-│   │    └── ...
-│   ├── ica                             <- Decoding each session with and without ICA components removed
-│   │    ├── accuracies
-│   │    └── ...
-├── info_files                          <- Files containing information about the data
-│   └── ...           
-├── preprocessing
-│   ├── check_ica.ipynb                 
-│   └── ...              
+│   └── ica                             <- Decoding each session with and without ICA components removed
+├── info_files                           
+├── preprocessing        
 ├── utils                               <- Local modules
 │   ├── __init__.py
 │   ├── data                            <- Functions for loading and preprocessing the data
-│   │    └── ...
 │   └── analysis                        <- Functions for decoding, plotting, etc
-│        └── ...
 └── README.md                           <- The top-level README for this project.  
 ```
