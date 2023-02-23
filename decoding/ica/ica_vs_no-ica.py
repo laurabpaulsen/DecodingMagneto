@@ -9,8 +9,8 @@ import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2]))
 
 from utils.analysis.decoder import Decoder
-from utils.data_prep.concatenate import read_and_concate_sessions
-from utils.data_prep.triggers import get_triggers_equal, convert_triggers_animate_inanimate
+from utils.data.concatenate import read_and_concate_sessions
+from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate
 
 import numpy as np
 import os

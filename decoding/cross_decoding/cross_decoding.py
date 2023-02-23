@@ -2,16 +2,11 @@
 This script is used to decode both source and sensor space data using cross decoding.
 
 Dev notes:
-- [ ] Add balanced class weights and maybe also stratified kfold??
 - [ ] Check that decoding in parcellated space works as well as sensor space
     - [ ] aparc
     - [ ] aparc.a2009s
     - [ ] aparc.DKTatlas
     - [ ] sens
-- [ ] document the script properly
-- [ ] improve code after if name in main (perhaps create functions for some of the code)
-- [ ] load session info from file instead of hardcoding it
-- [X] sign-flip!!!
 
 maybe add:
 - [ ] argsparser, so that you can run the script from the command line
@@ -30,8 +25,8 @@ import os
 import multiprocessing as mp
 
 
-from utils.data_prep.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
-from utils.data_prep.triggers import get_triggers_equal, convert_triggers_animate_inanimate
+from utils.data.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
+from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate
 from utils.analysis.decoder import Decoder
 
 classification = True

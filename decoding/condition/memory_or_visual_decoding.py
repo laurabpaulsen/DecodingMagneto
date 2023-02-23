@@ -6,8 +6,8 @@ Notes: Do we want to do this in source or sensor space?
 import os
 import numpy as np
 from utils.analysis.decoder import Decoder
-from utils.data_prep.concatenate import read_and_concate_sessions_source
-from utils.data_prep.triggers import balance_class_weights
+from utils.data.concatenate import read_and_concate_sessions_source
+from utils.data.triggers import balance_class_weights
 
 
 if __name__ in "__main__":
