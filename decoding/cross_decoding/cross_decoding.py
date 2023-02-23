@@ -14,6 +14,7 @@ Dev notes:
 - [ ] improve code after if name in main (perhaps create functions for some of the code)
 - [ ] load session info from file instead of hardcoding it
 - [ ] figure out if we need to try and optimise alpha
+- [X] sign-flip!!!
 """
 
 import sys
@@ -22,11 +23,14 @@ sys.path.append('../..')
 sys.path.append('../../..')
 
 from decoder_animacy import Decoder
-from helper_functions import read_and_concate_sessions_source, get_triggers_equal, read_and_concate_sessions, convert_triggers_animate_inanimate
 import numpy as np
 import os
 import multiprocessing as mp
 import argparse as ap
+
+from utils.data_prep.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
+from utils.data_prep.triggers import get_triggers_equal, convert_triggers_animate_inanimate
+
 
 classification = True
 ncv = 10
@@ -34,8 +38,9 @@ alpha = 'auto'
 model_type = 'LDA' # can be either LDA, SVM or RidgeClassifier
 get_tgm = True
 parc = 'aparc' # can be either aparc, aparc.a2009s, aparc.DKTatlas or sens
-ncores = 4 # mp.cpu_count()
+ncores = 8 # mp.cpu_count()
 output_path = os.path.join('accuracies', f'cross_decoding_{ncv}_{model_type}_{parc}.npy')
+
 
 
 def get_accuracy(input:tuple, classification=classification, ncv=ncv):
@@ -106,13 +111,16 @@ if __name__ == '__main__':
             sesh = [f'{i}-epo.fif' for i in sesh] # WITH ICA - should it be without?
             X, y = read_and_concate_sessions(sesh, triggers)
         else:
-            X, y = read_and_concate_sessions_source(path, event_path, sesh, triggers)
+            X, y = read_and_concate_sessions_source(path, event_path, sesh, triggers, sign_flip = True)
         
         y = convert_triggers_animate_inanimate(y) # converting triggers to animate and inanimate instead of images
 
         Xs.append(X)
         ys.append(y)
     
+    # sign flipping for concatenated sessions 
+    Xs = [flip_sign(Xs[0], X) for X in Xs]
+
     decoding_inputs = [(train_sesh, test_sesh, idx) for idx, train_sesh in enumerate(range(len(Xs))) for test_sesh in range(len(Xs))]
 
     T, N, C = Xs[0].shape
@@ -133,6 +141,4 @@ if __name__ == '__main__':
     np.save(output_path, accuracies)
     
 
-
-    
     
