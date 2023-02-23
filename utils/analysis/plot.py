@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import binom
+
 
 colours = ['#0063B2FF', '#5DBB63FF']
 
