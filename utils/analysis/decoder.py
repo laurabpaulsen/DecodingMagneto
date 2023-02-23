@@ -4,8 +4,6 @@ from sklearn.linear_model import RidgeClassifier
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
-import warnings
-warnings.filterwarnings("ignore", message="Only one sample available. You may want to reshape your data array")
 
 class Decoder():
     def __init__(self, classification, alpha, ncv, scale, model_type = 'LDA', get_tgm = True):
