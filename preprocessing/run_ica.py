@@ -1,5 +1,5 @@
 '''
-Usage, e.g., python run_ica.py -i '/media/8.1/raw_data/franscescas_data/raw_data/memory_01.fif'
+Usage, e.g., python run_ica.py -i '/media/8.1/raw_data/raw_data/memory_01.fif'
 
 This script is used for initial preprocessing. The following steps are included:
     1) Excludes bad-channels based on file 'session_info.txt'. These channels were marked as bad based on visual expection of raw MEG data.
