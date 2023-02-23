@@ -12,12 +12,18 @@ Regardless of the condition, no behavioral data was collected.
 ## Project Organization
 ```
 ├── decoding
-│   ├── cross_decoding                  <- Directory containing the cross decoding analysis
-│   │    ├── accuracies                 <- Directory for saving the accuracies
+│   ├── cross_decoding                  <- Decoding across sessions
+│   │    ├── accuracies                
 │   │    │   ├── cross_decoding_10_LDA_aparc.npy       
 │   │    │   └── ...
-│   │    ├── plots                      <- Directory for saving the plots
-│   │    └── cross_decoding.py          <- Runs cross decoding analysis 
+│   │    ├── plots                      
+│   │    └── cross_decoding.py          
+│   ├── condition                       <- Decoding between conditions (memory vs. no memory)
+│   │    ├── accuracies
+│   │    └── ...
+│   ├── ica                             <- Decoding each session with and without ICA components removed
+│   │    ├── accuracies
+│   │    └── ...
 ├── info_files                          <- Files containing information about the data
 │   ├── events                          <- Directory containing the events for each session 
 │   │    ├── memory_01_events.pkl       <- Pickle file containing the events for the memory task in session 01
@@ -25,16 +31,16 @@ Regardless of the condition, no behavioral data was collected.
 │   ├── hpi_mri.mat                     <- Mat file containing the MRI positions of the HPI
 │   ├── event_ids.txt                   <- Mapping of the stimuli to the triggers
 │   ├── event_session_info.py           <- Creates event_ids.txt and session_info.py
-│   ├── generate_files_events.py        <- script for generating the events files
+│   ├── generate_event_files.py
 │   └── session_info.txt                <- Bad channels, ICA noise components, etc for each session
-├── src                                 <- Scripts for preprocessing of the data
-│   ├── check_ica.ipynb                 <- Plotting of the ICA components
-│   ├── check_raw.ipynb                 <- Plotting of the raw data for identifying bad channels, tmin and tmax
-│   ├── epochs_2_source_space.py        <- Script for source reconstruction
-│   ├── preprocces_no_ica.py            <- Script for preprocessing without ICA
-│   ├── run_ica.ipynb                   <- Running ICA on the data
-│   └── source_space.py                 <- Setting up source space and BEM
-├── helper_functions.py                 <- Helper functions for the scripts
-├── plot_functions.py                   <- Plotting functions for the scripts
+├── preprocessing
+│   ├── check_ica.ipynb                 
+│   └── ...              
+├── utils                               <- Local modules
+│   ├── __init__.py
+│   ├── data                            <- Functions for loading and preprocessing the data
+│   │    └── ...
+│   └── analysis                        <- Functions for decoding, plotting, etc
+│        └── ...
 └── README.md                           <- The top-level README for this project.  
 ```
