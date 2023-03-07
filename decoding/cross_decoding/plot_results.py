@@ -1,3 +1,7 @@
+"""
+dev notes:
+- [ ] Get correct number of trials for vis and mem
+"""
 import sys
 import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2]))
@@ -8,7 +12,7 @@ import numpy as np
 import os
 
 
-for parc in ['aparc']:#, 'aparc.a2009s', 'aparc.DKTatlas', 'sens']:
+for parc in ['aparc', 'aparc.a2009s','aparc.DKTatlas', 'sens', 'HCPMMP1']:
     # read in results
     acc = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
 
@@ -30,17 +34,21 @@ for parc in ['aparc']:#, 'aparc.a2009s', 'aparc.DKTatlas', 'sens']:
     fig, axs = plt.subplots(2, 3, figsize = (10, 10))
     vis = np.array([0, 1, 2, 3, 5, 6])
     mem = np.array([7, 8, 9, 10])
-
-    axs[0, 0] = plot.plot_tgm_ax(acc[vis, vis, :, :].mean(axis = 0), ax=axs[0, 0], vmin=40, vmax=60)
+    
+    n_trials_vis = 5184 # GET THE CORRECT NUMBER
+    n_trials_mem = 3186# GET THE CORRECT NUMBER
+    
+    
+    axs[0, 0] = plot.plot_tgm_ax(acc[vis, vis, :, :].mean(axis = 0), ax=axs[0, 0], vmin=40, vmax=60, chance_level=chance_level(n_trials_vis, alpha = 0.001, p = 0.5))
     axs[0, 0].set_title('train: vis,  test:vis')
 
-    axs[0, 1] = plot.plot_tgm_ax(acc[mem, mem, :, :].mean(axis = 0), ax=axs[0, 1], vmin=40, vmax=60)
+    axs[0, 1] = plot.plot_tgm_ax(acc[mem, mem, :, :].mean(axis = 0), ax=axs[0, 1], vmin=40, vmax=60, chance_level=chance_level(n_trials_mem, alpha = 0.001, p = 0.5))
     axs[0, 1].set_title('train:mem, test:mem')
 
-    axs[1, 0] = plot.plot_tgm_ax(acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1)), ax=axs[1, 0], vmin=45, vmax=55)
+    axs[1, 0] = plot.plot_tgm_ax(acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1)), ax=axs[1, 0], vmin=45, vmax=55, chance_level=chance_level(n_trials_mem, alpha = 0.001, p = 0.5))
     axs[1, 0].set_title('train:vis, test:mem')
 
-    axs[1, 1] = plot.plot_tgm_ax(acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1)), ax=axs[1, 1], vmin=45, vmax=55)
+    axs[1, 1] = plot.plot_tgm_ax(acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1)), ax=axs[1, 1], vmin=45, vmax=55, chance_level=chance_level(n_trials_vis, alpha = 0.001, p = 0.5))
     axs[1, 1].set_title('train:mem, test:vis')
 
     # plot colourbar

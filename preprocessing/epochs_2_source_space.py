@@ -3,6 +3,10 @@ To set up source space FreeSurfer was initially used for MRI reconstruction. See
 MNE code used for setting up source space and creating BEM surfaces can be found in `source_space.py`. 
 
 Usage, e.g., python epochs_2_source_space.py -s 'memory_01'
+
+
+Dev notes:
+- [ ] Add a function for extracting the labelled time courses
 '''
 
 import mne
@@ -10,6 +14,7 @@ import argparse
 import scipy.io as sio
 import numpy as np
 import nibabel as nib
+import os
 
 def get_hpi_meg(epochs):
     hpi_coil_pos = np.array([dig['r'] for dig in epochs.info['hpi_results'][0]['dig_points']])
@@ -154,17 +159,22 @@ def transform_geometry(epochs, hpi_mri, image_nii):
         if i ==305:
             break
 
-    return epochs
+    return epochs   
 
+def extract_labeled_timecourse(stcs, parc, subject, subjects_dir, src): 
+    labels_parc = mne.read_labels_from_annot(subject, parc=parc, subjects_dir=subjects_dir)
+    label_time_course = mne.extract_label_time_course(stcs, labels_parc, src, mode='pca_flip')
+
+    return label_time_course
 
 def main(session):
-    src = mne.read_source_spaces('/media/8.1/raw_data/franscescas_data/mri/sub1-oct6-src.fif')
-    bem_sol = '/media/8.1/raw_data/franscescas_data/mri/subj1-bem_solution.fif'
+    src = mne.read_source_spaces(os.path.join(os.path.sep, 'media', '8.1', 'raw_data', 'franscescas_data', 'mri', 'sub1-oct6-src.fif'))
+    bem_sol = os.path.join(os.path.sep, 'media', '8.1', 'raw_data', 'franscescas_data', 'mri', 'subj1-bem_solution.fif')
     subject = 'subj1'
-    subject_dir = '/media/8.1/raw_data/franscescas_data/mri'
-    epoch_path = f'/media/8.1/final_data/laurap/epochs/{session}-epo.fif'
-    path_nii = '/media/8.1/scripts/laurap/franscescas_data/meg_headcast/mri/T1/sMQ03532-0009-00001-000192-01.nii'
-    hpi_mri = sio.loadmat(f'/media/8.1/scripts/laurap/franscescas_data/meg_headcast/hpi_mri.mat').get('hpi_mri')
+    subject_dir = os.path.join(os.path.sep, 'media', '8.1', 'raw_data', 'franscescas_data', 'mri')
+    epoch_path = os.path.join(os.path.sep, 'media', '8.1', 'final_data', 'laurap', 'epochs', f'{session}-epo.fif')
+    path_nii = os.path.join(os.path.sep, 'media', '8.1', 'scripts', 'laurap', 'franscescas_data', 'meg_headcast', 'mri', 'T1', 'sMQ03532-0009-00001-000192-01.nii')
+    hpi_mri = sio.loadmat(os.path.join(os.path.sep, 'media', '8.1', 'scripts', 'laurap', 'franscescas_data', 'meg_headcast', 'hpi_mri.mat')).get('hpi_mri')
 
     epochs = mne.read_epochs(epoch_path)
     epochs = transform_geometry(epochs, hpi_mri, path_nii)
@@ -174,18 +184,36 @@ def main(session):
     inv = mne.minimum_norm.make_inverse_operator(epochs.info, fwd, cov, loose='auto')
     
     # applying the inverse solution to the epochs
-    stcs = mne.minimum_norm.apply_inverse_epochs(epochs, inv,lambda2=1.0 / 3.0 ** 2, verbose=False, method="dSPM", pick_ori="normal")
+    stcs = mne.minimum_norm.apply_inverse_epochs(epochs, inv, lambda2=1.0 / 3.0 ** 2, verbose=False, method="dSPM", pick_ori="normal")
     stcs_array = np.array([stc for stc in stcs])
     np.save(f'/media/8.1/final_data/laurap/source_space/sources/{session}_source', stcs_array)
 
-    # Labels for cortical parcellation
-    for parc in ['aparc.a2009s', 'aparc', 'aparc.DKTatlas']: #
-        labels_parc = mne.read_labels_from_annot(subject, parc=parc, subjects_dir=subject_dir)
-        # Average the source estimates within each label of the cortical parcellation
-        # and each sub-structure contained in the source space.
-        src = inv['src']
-        label_time_course = mne.extract_label_time_course(stcs, labels_parc, src, mode='pca_flip')
+    # extract label time courses for three of the cortical parcellations
+    for parc in ['aparc.a2009s', 'aparc', 'aparc.DKTatlas']:
+        label_time_course = extract_labeled_timecourse(stcs, parc, subject, subject_dir, inv['src'])
         np.save(f'/media/8.1/final_data/laurap/source_space/parcelled/{parc}/{session}_parcelled', label_time_course)
+
+    
+    # extract hcpmmp1 time courses
+    fname_fsaverage_src = (os.path.join(subject_dir, 'fsaverage','bem', 'fsaverage-ico-5-src.fif'))
+    src_to = mne.read_source_spaces(fname_fsaverage_src)
+
+    morphed_stcs = []
+    for stc in stcs:
+        morph = mne.compute_source_morph(stc, 
+                                         subject_from='subj1',
+                                         subject_to='fsaverage', 
+                                         src_to=src_to,
+                                         subjects_dir=subject_dir)
+        
+        stc_fsaverage = morph.apply(stc)
+        
+        morphed_stcs.append(stc_fsaverage)
+    
+    src_fs = mne.read_source_spaces('/media/8.1/raw_data/franscescas_data/mri/fsaverage/bem/fsaverage-ico-5-src.fif')
+    label_time_course = extract_labeled_timecourse(morphed_stcs, 'HCPMMP1', 'fsaverage', subject_dir, src_fs)
+    np.save(f'/media/8.1/final_data/laurap/source_space/parcelled/HCMMP1/{session}_parcelled', label_time_course)
+
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
