@@ -1,7 +1,5 @@
+## Files in the info_files directory
 
-
-
-## Directory structure
 ```
 ├── events                          <- Directory containing the events for each session 
 │    ├── memory_01_events.pkl       <- Pickle file containing the events for the memory task in session 01
