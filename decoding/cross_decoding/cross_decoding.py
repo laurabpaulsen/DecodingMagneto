@@ -3,13 +3,14 @@ This script is used to decode both source and sensor space data using cross deco
 
 Dev notes:
 - [ ] Check that decoding in parcellated space works as well as sensor space
-    - [ ] aparc
-    - [ ] aparc.a2009s
-    - [ ] aparc.DKTatlas
-    - [ ] sens
+    - [X] aparc
+    - [X] aparc.a2009s
+    - [X] aparc.DKTatlas
+    - [X] sens
+    - [ ] HCPMMP1
 
 maybe add:
-- [ ] argsparser, so that you can run the script from the command line
+- [ ] argsparser, so that you can run the script from the command line specifying the parameters
 - [ ] bash script to run the script for all parcellations and sensor space
 - [ ] move get accuracy function to utils.analysis.decoder??
 
@@ -18,11 +19,14 @@ maybe add:
 import sys
 import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
-
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 import numpy as np
 import os
 import multiprocessing as mp
+
+from time import perf_counter
 
 
 from utils.data.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
@@ -34,10 +38,9 @@ ncv = 10
 alpha = 'auto'
 model_type = 'LDA' # can be either LDA, SVM or RidgeClassifier
 get_tgm = True
-parc = 'aparc' # can be either aparc, aparc.a2009s, aparc.DKTatlas or sens
-ncores = 4 # mp.cpu_count()
+parc = 'sens' # can be either aparc, aparc.a2009s, aparc.DKTatlas or sens
+ncores = 12 # mp.cpu_count()
 output_path = os.path.join('accuracies', f'cross_decoding_{ncv}_{model_type}_{parc}.npy')
-
 
 
 def get_accuracy(input:tuple, classification=classification, ncv=ncv):
@@ -52,6 +55,8 @@ def get_accuracy(input:tuple, classification=classification, ncv=ncv):
     Returns:
         tuple: tuple containing session_train, session_test and accuracy
     """
+    start = perf_counter()
+
     decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, scale = True, model_type = model_type, get_tgm=True)
     
     (session_train, session_test, idx) = input # unpacking input tuple
@@ -70,16 +75,24 @@ def get_accuracy(input:tuple, classification=classification, ncv=ncv):
 
         accuracy = decoder.run_decoding_across_sessions(X_train, y_train, X_test, y_test)
     
-    print(f'Index {idx} done')
+    end = perf_counter()
+
+    print(f'Finished decoding index {idx} in {end-start} seconds')
 
     return session_train, session_test, accuracy
 
 if __name__ == '__main__':
-    print('Running cross decoding with the following parameters...')
-    print(f'Classification: {classification}')
-    print(f'Number of cross validation folds: {ncv}')
-    print(f'Parcellation: {parc}')
-    print(f'Alpha: {alpha}')
+
+    # define logger
+    logger = logging.getLogger(__name__)
+
+    # log info
+    logger.info(f'Running cross decoding with the following parameters...')
+    logger.info(f'Classification: {classification}')
+    logger.info(f'Number of cross validation folds: {ncv}')
+    logger.info(f'Parcellation: {parc}')
+    logger.info(f'Alpha: {alpha}')
+
 
 
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
@@ -104,13 +117,8 @@ if __name__ == '__main__':
         ys.append(y)
     
     # sign flipping for concatenated data (source space only)
-    # 
     if parc != 'sens': 
         Xs = [flip_sign(Xs[0], X) for X in Xs]
-
-    # print number of trials for each X
-    for X in Xs:
-        print(X.shape[1])
 
 
     # preparing decoding inputs for multiprocessing
@@ -134,20 +142,4 @@ if __name__ == '__main__':
         os.mkdir('accuracies')
 
     np.save(output_path, accuracies)
-    
-
-
-# argparse old version
-    #parser = ap.ArgumentParser()
-    #parser.add_argument('-c', '--classification', type=bool, default=True, help='whether to perform classification or regression')
-    #parser.add_argument('-n', '--ncv', type=int, default=10, help='number of cross validation folds')
-    #parser.add_argument('-p', '--parc', type=str, default='parc', help='parcellation to use, can be either aparc, aparc.a2009s, aparc.DKTatlas or sens')
-    #parser.add_argument('-a', '--alpha', default='auto', help='alpha value to use for regularization') # would not work if a int is passed, fix!
-
-    #args = parser.parse_args()
-
-    # checks if parcellation is valid
-    #if args.parc not in ['aparc', 'aparc.a2009s', 'aparc.DKTatlas', 'sens']:
-    #    raise ValueError('Invalid parcellation, must be either aparc, aparc.a2009s, aparc.DKTatlas or sens')
-
     
