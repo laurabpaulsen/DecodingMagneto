@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.linear_model import RidgeClassifier
-from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 
@@ -29,7 +28,24 @@ class Decoder():
             y[ycopy == values[k]] = k+1
 
         return y
-
+    
+    def _return_pipeline(self):
+        if self.model_type == 'LDA':
+            model = make_pipeline(StandardScaler(), LDA(solver = 'lsqr', shrinkage = self.alpha))
+        elif self.model_type == 'RidgeClassifier':
+            model = make_pipeline(StandardScaler(), RidgeClassifier(solver = 'lsqr'), shrinkage = self.alpha)
+        else:
+            raise ValueError('Model type not supported')
+        
+        return model
+    
+    def empty_accuracy_array(self, T):
+        if self.get_tgm:
+            scores = np.zeros((T, T, self.ncv))
+        elif not self.get_tgm:
+            scores = np.zeros((T, self.ncv))
+        
+        return scores
 
     def run_decoding(self, X, y):
         T, N, C  = X.shape # T = time, N = trials, C = channels/parcels
@@ -39,10 +55,7 @@ class Decoder():
         inds = np.array(range(N))
         np.random.shuffle(inds)
 
-        if self.get_tgm:
-            scores = np.zeros((T, T, self.ncv))
-        elif not self.get_tgm:
-            scores = np.zeros((T, self.ncv))
+        scores = self.empty_accuracy_array(T)
 
 
         for c in range(self.ncv):
@@ -56,14 +69,8 @@ class Decoder():
 
             for t in range(T):
                 X_t = X_train[t, :, :]
-                if self.model_type == 'LDA':
-                    model = make_pipeline(StandardScaler(), LDA(solver = 'lsqr', shrinkage = self.alpha))
-                elif self.model_type == 'SVM':
-                    model = make_pipeline(StandardScaler(), LinearSVC(random_state = 0, max_iter = 2000, class_weight = 'balanced', dual = True, fit_intercept = False))
-                elif self.model_type == 'RidgeClassifier':
-                    model = make_pipeline(StandardScaler(), RidgeClassifier(solver = 'lsqr', alpha = self.alpha))
-                else:
-                    print('Decoder only supports LDA, SVM or RidgeClassifier')
+                
+                model = self._return_pipeline()
 
                 model.fit(X_t, y_train)
 
@@ -100,13 +107,7 @@ class Decoder():
         np.random.shuffle(inds_train)
         np.random.shuffle(inds_test)
 
-        if self.get_tgm:
-            scores = np.zeros((T,T, self.ncv))
-
-                
-        elif not self.get_tgm:
-            scores = np.zeros((T, self.ncv))
-
+        scores = self.empty_accuracy_array(T)
 
         for c in range(self.ncv):
             inds_tmp_train = inds_train[:]
@@ -124,12 +125,7 @@ class Decoder():
             for t in range(T):
                 X_t = X_train_tmp[t, :, :]
 
-                if self.model_type == 'LDA':
-                    model = make_pipeline(StandardScaler(), LDA(solver = 'lsqr', shrinkage = self.alpha))
-                elif self.model_type == 'RidgeClassifier':
-                    model = make_pipeline(StandardScaler(), RidgeClassifier(solver = 'lsqr'), shrinkage = self.alpha)
-                else:
-                    print('Decoder only supports LDA, SVM or RidgeClassifier')
+                model = self._return_pipeline()
 
                 model.fit(X_t, y_train_tmp)
 
