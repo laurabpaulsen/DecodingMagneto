@@ -167,6 +167,16 @@ def extract_labeled_timecourse(stcs, parc, subject, subjects_dir, src):
 
     return label_time_course
 
+def fsaverage_stcs(stcs, subject_from, src_to, subjects_dir):
+    
+    morph = mne.compute_source_morph(stcs[0], subject_from = subject_from, subject_to='fsaverage', 
+                                         src_to=src_to, subjects_dir=subjects_dir)
+    
+    morphed_stcs = [morph.apply(stc) for stc in stcs]
+
+    return morphed_stcs
+    
+
 def main(session):
     src = mne.read_source_spaces(os.path.join(os.path.sep, 'media', '8.1', 'raw_data', 'franscescas_data', 'mri', 'sub1-oct6-src.fif'))
     bem_sol = os.path.join(os.path.sep, 'media', '8.1', 'raw_data', 'franscescas_data', 'mri', 'subj1-bem_solution.fif')
@@ -198,20 +208,11 @@ def main(session):
     fname_fsaverage_src = (os.path.join(subject_dir, 'fsaverage','bem', 'fsaverage-ico-5-src.fif'))
     src_to = mne.read_source_spaces(fname_fsaverage_src)
 
-    morphed_stcs = []
-    for stc in stcs:
-        morph = mne.compute_source_morph(stc, 
-                                         subject_from='subj1',
-                                         subject_to='fsaverage', 
-                                         src_to=src_to,
-                                         subjects_dir=subject_dir)
-        
-        stc_fsaverage = morph.apply(stc)
-        
-        morphed_stcs.append(stc_fsaverage)
-    
+    morphed_stcs = fsaverage_stcs(stcs, subject, src_to, subject_dir)
+
     src_fs = mne.read_source_spaces('/media/8.1/raw_data/franscescas_data/mri/fsaverage/bem/fsaverage-ico-5-src.fif')
     label_time_course = extract_labeled_timecourse(morphed_stcs, 'HCPMMP1', 'fsaverage', subject_dir, src_fs)
+    
     np.save(f'/media/8.1/final_data/laurap/source_space/parcelled/HCMMP1/{session}_parcelled', label_time_course)
 
 
@@ -219,5 +220,6 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('-s', '--session', required=True, help='session, e.g., visual_03')
     args = vars(ap.parse_args())
+
     main(args['session'])
 
