@@ -8,7 +8,6 @@ This folder holds the subfolders for the different decoding analyses. The follow
 
 ## Files in the decoding directory
 ```
-├── README.md
 ├── condition
 │   ├── accuracies
 │   ├── condition_decoding.py
@@ -24,5 +23,5 @@ This folder holds the subfolders for the different decoding analyses. The follow
 │   ├── ica_decoding.py
 │   ├── plot_results.py
 │   └── ...
-
+└── README.md
 ```
