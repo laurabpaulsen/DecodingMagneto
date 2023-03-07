@@ -1,7 +1,5 @@
-import mne
 import numpy as np
 import os
-import pickle as pkl
 import json
 
 def get_triggers_equal():
