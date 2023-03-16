@@ -1,6 +1,6 @@
 mne
 numpy
-sklearn
+scikit-learn
 matplotlib
 nibabel
 scipy
