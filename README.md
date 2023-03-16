@@ -9,6 +9,15 @@ The participant was subject to two different conditions:
 
 Regardless of the condition, no behavioral data was collected.
 
+## Usage
+1. Clone the repository
+2. ??? download the data ???
+3. Create environment and install dependencies
+```
+setup.sh
+```
+
+
 ## Project Organization
 ```
 ├── decoding
