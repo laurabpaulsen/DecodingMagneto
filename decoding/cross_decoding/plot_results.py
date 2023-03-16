@@ -1,6 +1,6 @@
 """
-dev notes:
-- [ ] Get correct number of trials for vis and mem
+This script plots the results of the cross decoding analysis
+
 """
 import sys
 import pathlib
@@ -10,6 +10,30 @@ from utils.analysis.tools import chance_level
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+alpha = 0.05
+
+def add_diagonal_line(ax):
+    """
+    Adds a diagonal line to a plot
+    """
+    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color = 'red', linestyle = '--', alpha = 0.5, linewidth = 1)
+
+def change_spine_colour(ax, colour):
+    """
+    Changes the colour of the spines of a plot
+    """
+    for spine in ax.spines.values():
+        spine.set_edgecolor(colour)
+
+    # change the colour of the ticks
+    ax.tick_params(axis='x', colors=colour)
+    ax.tick_params(axis='y', colors=colour)
+
+    # title
+    ax.title.set_color(colour)
+
 
 def plot_cross_decoding_matrix(acc, parc):
     fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (30, 30))
@@ -23,52 +47,150 @@ def plot_cross_decoding_matrix(acc, parc):
     plt.savefig(os.path.join('plots', f'cross_decoding_{parc}.png'))
     plt.close()
 
-def plot_train_test_condition(acc, parc):
-    fig, axs = plt.subplots(2, 3, figsize = (10, 10))
-    vis = np.array([0, 1, 2, 3, 5, 6])
+
+def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
+    fig, axs = plt.subplots(3, 3, figsize = (15, 15))
+    
+    vis = np.array([0, 1, 2, 3, 4, 5, 6])
     mem = np.array([7, 8, 9, 10])
     
-    n_trials_vis = 5184 # GET THE CORRECT NUMBER
-    n_trials_mem = 3186 # GET THE CORRECT NUMBER
+    n_trials_vis = 588 * len(vis)
+    n_trials_mem = 588 * len(mem)
+
+    vmin_diff = -5
+    vmax_diff = 5
+
     
-    
-    axs[0, 0] = plot.plot_tgm_ax(acc[vis, vis, :, :].mean(axis = 0), ax=axs[0, 0], vmin=40, vmax=60, chance_level=chance_level(n_trials_vis, alpha = 0.001, p = 0.5))
+    # train and test on same condition
+    vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
+    axs[0, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[0, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5))
     axs[0, 0].set_title('train: vis,  test:vis')
 
-    axs[0, 1] = plot.plot_tgm_ax(acc[mem, mem, :, :].mean(axis = 0), ax=axs[0, 1], vmin=40, vmax=60, chance_level=chance_level(n_trials_mem, alpha = 0.001, p = 0.5))
+    mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
+
+    axs[0, 1] = plot.plot_tgm_ax(mem_mem, ax=axs[0, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5))
     axs[0, 1].set_title('train:mem, test:mem')
 
-    axs[1, 0] = plot.plot_tgm_ax(acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1)), ax=axs[1, 0], vmin=45, vmax=55, chance_level=chance_level(n_trials_mem, alpha = 0.001, p = 0.5))
+    # difference between test and train condition (vis - mem)
+    axs[0, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff)
+    
+    # add diagonal line
+    add_diagonal_line(axs[0, 2])
+    axs[0, 2].set_title('vis_vis - mem_mem')
+
+    # train on vis, test on mem
+    vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
+
+    axs[1, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5))
     axs[1, 0].set_title('train:vis, test:mem')
 
-    axs[1, 1] = plot.plot_tgm_ax(acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1)), ax=axs[1, 1], vmin=45, vmax=55, chance_level=chance_level(n_trials_vis, alpha = 0.001, p = 0.5))
+    # train on mem, test on vis
+    mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
+    axs[1, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5))
     axs[1, 1].set_title('train:mem, test:vis')
 
-    # plot colourbar
-    axs[0, 2].axis('off')
-    axs[1, 2].axis('off')
-    fig.colorbar(axs[0, 0].images[0], ax=axs[0, 2], fraction=0.046, pad=0.04)
-    fig.colorbar(axs[1, 0].images[0], ax=axs[1, 2], fraction=0.046, pad=0.04)
+    # difference between test and train condition
+    axs[1, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
+    axs[1, 2].set_title('vis_mem - mem_vis')
+    add_diagonal_line(axs[1, 2])
 
+    # difference between vis_vis and vis_mem
+    axs[2, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[2, 0], vmin=vmin_diff, vmax=vmax_diff)
+    axs[2, 0].set_title('vis_vis - vis_mem')
+    add_diagonal_line(axs[2, 0])
+
+    # difference between mem_mem and mem_vis
+    axs[2, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[2, 1], vmin=vmin_diff, vmax=vmax_diff)
+    axs[2, 1].set_title('mem_mem - mem_vis')
+    add_diagonal_line(axs[2, 1])
+
+    for ax in axs[[1, 2, 2, 2, 0], [2, 2, 1, 0, 2]].flatten(): # difference plots
+        change_spine_colour(ax, diff_colour)
+
+    # plot colourbars in the last row and column
+    axs[2, 2].axis('off')
+    # 
+    #axs[2, 2] = plot.plot_tgm_ax(vis_vis - vis_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff)
+    divider = make_axes_locatable(axs[2, 2])
+    cax = divider.append_axes('bottom', size='100%', pad=0)
+    cax1 = divider.append_axes('top', size='100%', pad=0)
+    
+    clb1 = fig.colorbar(axs[0, 0].images[0], cax=cax1, orientation='horizontal')
+    clb1.ax.set_title('accuracy (%)')
+
+    clb2 = fig.colorbar(axs[1, 2].images[0], cax=cax, orientation='horizontal')
+    clb2.ax.set_title('difference (%)')
+
+    change_spine_colour(clb2.ax, diff_colour)
+
+    plt.tight_layout()
     plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average_vis_mem.png'))
+
+def plot_diagonals(acc_dict, title = 'diagonals', save_path = None):
+    """
+    
+    """
+
+    dict_diag = {}
+    for parc, acc in acc_dict.items():
+        # check if any nans
+        if np.isnan(acc).any():
+            print('nans')
+            avg = np.nanmean(np.nanmean(acc, axis=0), axis=0)
+            # take the diagonal
+            dict_diag[parc] = np.diag(avg)
+
+        else:
+            print('no nans')
+            within_session = np.diagonal(acc, axis1=0, axis2=1)
+            # take the mean over sessions
+            avg = np.nanmean(within_session, axis=2)
+            dict_diag[parc] = np.diag(avg)
+
+
+    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
+    for key, value in dict_diag.items():
+        ax.plot(value, label=key)
+
+    ax.set_xlabel('time (ms)')
+    ax.set_ylabel('accuracy')
+    ax.set_title(title)
+    ax.legend()
+    if save_path:
+        plt.savefig(save_path)
+
+
+def main_plot_generator():
+    accuracies_cross = {} # not including testing and training on the same session
+    accuracies = {} # including testing and training on the same session
+
+    for parc in ['aparc','aparc.DKTatlas', 'aparc.a2009s', 'sens', 'HCPMMP1']:
+        # read in results
+        accuracies[parc] = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
+
+        # plot all pairs of sessions in one figure
+        #plot_cross_decoding_matrix(accuracies[parc], parc)
+
+        # set within session accuracies to nan
+        acc1 = accuracies[parc].copy()
+        acc1[np.arange(acc1.shape[0]), np.arange(acc1.shape[1]), :, :] = np.nan
+
+        accuracies_cross[parc] = acc1
+
+        # plot average over all conditions and all cross-session pairs
+        plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=42.5, vmax=57.5, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
+        plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
+        
+        # plot averaged according to conditions and using cross-session pairs
+        plot_train_test_condition(acc1, parc, diff_colour='red')
+
+    plot_diagonals(accuracies_cross, title = 'Diagonals across sessions', save_path = os.path.join('plots', f'diagonals_across.png'))
+
+
+        
+    plot_diagonals(accuracies, title = 'Diagonals within session', save_path = os.path.join('plots', f'diagonals_within.png'), )
+
 
 
 if __name__ == '__main__':
-
-    for parc in ['aparc', 'aparc.a2009s','aparc.DKTatlas', 'sens', 'HCPMMP1']:
-        # read in results
-        acc = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
-
-        # plot the matrix
-        plot_cross_decoding_matrix(acc, parc)
-
-        # one fig with the average
-        plt = plot.plot_tgm_fig(acc.mean(axis=(0, 1)), vmin=45, vmax=55, chance_level=chance_level(8039, alpha = 0.001, p = 0.5))
-        plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
-        
-        # a plot with the average of 4 different things (test mem + train mem, test vis + train vis, test mem + train vis, test vis + train mem)
-        plot_train_test_condition(acc, parc)
-
-
-
-
+    main_plot_generator()
