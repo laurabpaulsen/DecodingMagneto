@@ -44,7 +44,7 @@ def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = F
     im = ax.imshow(X*100, vmin = vmin, vmax = vmax, origin = 'lower')
     
     if chance_level is not None:
-        ax.contour(X*100, levels=[chance_level*100], colors='k', alpha = 0.5, linewidths=1, linestyles='--')
+        ax.contour(X*100, levels=[chance_level*100], colors='gray', alpha = 0.5, linewidths=0.5)
 
 
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
@@ -67,7 +67,7 @@ def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None):
 
     im = ax.imshow(X*100, vmin = vmin, vmax = vmax, origin = 'lower')
     if chance_level is not None:
-        plt.contour(X*100, levels=[chance_level*100], colors='k', alpha = 0.5, linewidths=1, linestyles='--')
+        plt.contour(X*100, levels=[chance_level*100], colors='k', alpha = 0.5, linewidths=0.5)
 
 
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
