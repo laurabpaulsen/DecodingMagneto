@@ -64,7 +64,7 @@ if __name__ in '__main__':
         # balance class weights
         X, y, _= balance_class_weights(X, y)
 
-        print(f'X shape: {X.shape}', f'y shape: {y.shape}')
+        
         # animate vs inanimate triggers instead of image triggers
         y = convert_triggers_animate_inanimate(y)
 
@@ -75,4 +75,4 @@ if __name__ in '__main__':
         accuracies = decoder.run_decoding(X, y)
         
         # save results
-        np.save(f'accuracies/accuracies_{args.ica}_session_{i+1}.npy', accuracies)
+        np.save(f'accuracies/{args.ica}_session_{i+1}.npy', accuracies)
