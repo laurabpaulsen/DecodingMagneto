@@ -1,0 +1,8 @@
+mne
+numpy
+sklearn
+matplotlib
+nibabel
+scipy
+json
+pickle
