@@ -26,13 +26,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')
     parser.add_argument('--model_type', type=str, default='LDA', help='Model type. Can be either LDA or RidgeClassifier.')
     parser.add_argument('--parc', type=str, default='sens', help='Parcellation. Can be either aparc, aparc.a2009s, aparc.DKTatlas, HCPMMP1 or sens.')
-    parser.add_argument('--ncores', type=int, default=10, help='Number of cores to use.')
+    parser.add_argument('--n_jobs', type=int, default=10, help='Number of cores to use.')
     parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
     parser.add_argument('--alpha', type=str, default='auto', help='Regularization parameter. Can be either auto or float.')
 
     args = parser.parse_args()
 
-    assert args.ncores <= mp.cpu_count(), f'Number of cores ({ncores}) cannot be larger than number of available cores ({mp.cpu_count()})'
+    assert args.n_jobs <= mp.cpu_count(), f'Number of jobs ({args.n_jobs}) cannot be larger than number of available cores ({mp.cpu_count()})'
 
     return args
 
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     model_type = args.model_type
     get_tgm = True
     parc = args.parc
-    ncores = args.ncores
+    n_jobs = args.n_jobs
     ncv = args.ncv
     alpha = args.alpha
 
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     # empty array to store accuracies in
     accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0]), dtype=float)
 
-    with mp.Pool(ncores) as p:
+    with mp.Pool(n_jobs) as p:
         for train_session, test_session, accuracy in p.map(get_accuracy, decoding_inputs):
             accuracies[train_session, test_session, :, :] = accuracy
     
