@@ -162,12 +162,53 @@ def transform_geometry(epochs, hpi_mri, image_nii):
     return epochs   
 
 def extract_labeled_timecourse(stcs, parc, subject, subjects_dir, src): 
+    """
+    Extracts the timecourse of the labels in the stcs
+    
+    Parameters
+    ----------
+    stcs : list
+        The list of stcs
+    parc : str
+        The parcellation to use
+    subject : str
+        The subject name
+    subjects_dir : str
+        The path to the subjects directory
+    src : str
+        The path to the source space file or source space object
+
+    Returns
+    -------
+    label_time_course : list
+        The list of label timecourses
+    """
+    
     labels_parc = mne.read_labels_from_annot(subject, parc=parc, subjects_dir=subjects_dir)
     label_time_course = mne.extract_label_time_course(stcs, labels_parc, src, mode='pca_flip')
 
     return label_time_course
 
 def fsaverage_stcs(stcs, subject_from, src_to, subjects_dir):
+    """
+    Morphs the stcs to fsaverage
+
+    Parameters
+    ----------
+    stcs : list
+        The list of stcs
+    subject_from : str
+        The subject name
+    src_to : str
+        The path to the source space file or source space object to morph to
+    subjects_dir : str
+        The path to the subjects directory
+    
+    Returns
+    -------
+    morphed_stcs : list
+        The list of morphed stcs
+    """
     
     morph = mne.compute_source_morph(stcs[0], subject_from = subject_from, subject_to='fsaverage', 
                                          src_to=src_to, subjects_dir=subjects_dir)
@@ -219,7 +260,7 @@ def main(session):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('-s', '--session', required=True, help='session, e.g., visual_03')
-    args = vars(ap.parse_args())
+    args = ap.parse_args()
 
-    main(args['session'])
+    main(args.session)
 
