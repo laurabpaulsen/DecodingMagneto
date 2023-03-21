@@ -8,7 +8,7 @@ import numpy as np
 import os
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-alpha = 0.05
+alpha = 0.001
 
 
 # set parameters for all plots
@@ -68,13 +68,13 @@ def main_plot_generator():
     # with no_ica
     no_ica = np.array([acc for f, acc in accuracies.items() if 'no_ica' in f])
     no_ica = np.mean(no_ica, axis=0)
-    ax[0] = plot.plot_tgm_ax(no_ica, ax[0], vmin=20, vmax=80, chance_level=chance_level(588, alpha = alpha, p = 0.5))
+    ax[0] = plot.plot_tgm_ax(no_ica, ax[0], vmin=20, vmax=80, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
     ax[0].set_title('No ICA')
 
     # with ica
     ica = np.array([acc for f, acc in accuracies.items() if not 'no_ica' in f])
     ica = np.mean(ica, axis=0)
-    ax[1] = plot.plot_tgm_ax(ica, ax[1], vmin=20, vmax=80, chance_level=chance_level(588, alpha = alpha, p = 0.5))
+    ax[1] = plot.plot_tgm_ax(ica, ax[1], vmin=20, vmax=80, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
     ax[1].set_title('ICA')
     
     # add subplot for colorbar
