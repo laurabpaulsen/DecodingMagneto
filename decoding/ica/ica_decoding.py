@@ -31,6 +31,7 @@ get_tgm = True
 def parse_args():
     parser = argparse.ArgumentParser(description='Decoding analysis')
     parser.add_argument('--ica', type=str, default='ica', help='ica or no_ica')
+    parser.add_argument('--n_jobs', type=int, default=1, help='number of jobs')
     args = parser.parse_args()
 
     # check if ica or no_ica
@@ -95,7 +96,7 @@ if __name__ in '__main__':
     elif args.ica == 'no_ica':
         sesh = [[f'{s}-no_ica-epo.fif' for s in session] for session in sessions]
 
-    pool = multiprocessing.Pool(processes=9)
+    pool = multiprocessing.Pool(processes = args.n_jobs)
 
     for session_number, session in enumerate(sesh):
         pool.apply_async(decode_session, (session, session_number, args.ica))
