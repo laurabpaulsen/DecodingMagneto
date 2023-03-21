@@ -3,46 +3,55 @@ import numpy as np
 import os
 import pickle as pkl
 
-def flip_sign(X_compare_session, X_flip_session):
+def flip_sign(X1, X2):
     """
-    This function is used to flip the sign of the data in flip_session if the correlation between the data in compare_session and flip_session is negative.
+    This function is used to flip the sign of the data in X2 if the correlation between the data in X1 and X2 is negative.
 
-    Args:
-        compare_session (int): data from the session to compare to (shape should be [timepoints, n_trials, n_parcels])
-        flip_session (int): data from the session to flip the sign of (shape should be [timepoints, n_trials, n_parcels])
+    Parameters
+    ----------
+    X1 (array): 
+        Data from the session to compare to with shape (n_channels, n_trials, n_times)
+        
+    X2 (array): 
+        Data from the session to flip the sign of with shape (n_channels, n_trials, n_times)
 
-    Returns:
-        X_flip_session (ndarray): data with flipped signs (if correlation of any of the parcels were negative)
+    Returns
+    -------
+    X2 (ndarray): 
+        X2 with the sign flipped if the correlation between X1 and X2 is negative in the given parcel with shape (n_channels, n_trials, n_times)
     """
 
     # checking that the T and P dimensions are the same
-    if X_compare_session.shape[0] != X_flip_session.shape[0]:
+    if X1.shape[0] != X2.shape[0]:
         raise ValueError('The number of time points in the two sessions are not the same')
     
-    if X_compare_session.shape[2] != X_flip_session.shape[2]:
+    if X1.shape[2] != X2.shape[2]:
         raise ValueError('The number of parcels in the two sessions are not the same')
 
     # loop over parcels
-    for i in range(X_compare_session.shape[2]):
+    for i in range(X1.shape[2]):
         # take means over trials
-        mean1 = np.mean(X_compare_session[:, :, i], axis = 1)
-        mean2 = np.mean(X_flip_session[:, :, i], axis = 1)
+        mean1 = np.mean(X1[:, :, i], axis = 1)
+        mean2 = np.mean(X2[:, :, i], axis = 1)
 
         # calculate correlation
         corr = np.corrcoef(mean1, mean2)[0, 1]
 
-        if corr < 0:
-            X_flip_session[:, :, i] = X_flip_session[:, :, i] * -1
+        if corr < 0: # if correlation is negative, flip sign
+            X2[:, :, i] = X2[:, :, i] * -1
 
-    return X_flip_session
+    return X2
 
 
 def read_and_concate_sessions(session_files, trigger_list):
-    """Reads and concatenates epochs from different sessions into a single epochs object.
+    """
+    Reads and concatenates epochs from different sessions into a single epochs object.
+
     Parameters
     ----------
     session_files : list
-        List of session files to be concatenated.
+        List of files to be concatenated.
+
     trigger_list : list
         List of triggers to be included in the concatenated epochs object.
 
@@ -80,7 +89,9 @@ def read_and_concate_sessions(session_files, trigger_list):
     return X, y
 
 def read_and_concate_sessions_source(path, event_path, session_files, trigger_list, sign_flip = True):
-    """Reads and concatenates epochs from different sessions into a single epochs object.
+    """
+    Reads and concatenates epochs from different sessions into a single epochs object.
+    
     Parameters
     ----------
     session_files : list

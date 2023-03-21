@@ -45,7 +45,28 @@ def convert_triggers_animate_inanimate(y):
     return y
 
 
-def balance_class_weights(X, y):
+def balance_class_weights(X, y, verbose = True):
+    """
+    Balances the class weight by removing trials from the class with the most trials.
+
+    Parameters
+    ----------
+    X : array
+        Data array with shape (n_channels, n_trials, n_times)
+    y : array
+        Array with shape (n_trials, ) containing two classes (0 or 1)
+    verbose : bool, optional
+        Print statements. The default is True.
+    
+    Returns
+    -------
+    X_equal : array
+        Data array with shape (n_channels, n_trials, n_times) with equal number of trials for each class
+    y_equal : array
+        Array with shape (n_trials, ) containing classes with equal number of trials for each class
+    remove_ind : list
+        List of indices that were removed from the data
+    """
     keys, counts = np.unique(y, return_counts = True)
     if counts[0]-counts[1] > 0:
         index_inanimate = np.where(np.array(y) == 0)
@@ -59,7 +80,8 @@ def balance_class_weights(X, y):
     X_equal = np.delete(X, remove_ind, axis = 1)
     y_equal = np.delete(y, remove_ind, axis = 0)
 
-    print(f'Removed a total of {len(remove_ind)} trials')
-    print(f'{len(y_equal)} remains')
+    if verbose:
+        print(f'Removed a total of {len(remove_ind)} trials')
+        print(f'{len(y_equal)} remains')
     
     return X_equal, y_equal, remove_ind
