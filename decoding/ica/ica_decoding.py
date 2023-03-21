@@ -61,13 +61,12 @@ if __name__ in '__main__':
 
         X, y = read_and_concate_sessions(sesh, triggers)
 
-        # balance class weights
-        X, y, _= balance_class_weights(X, y)
-
-        
         # animate vs inanimate triggers instead of image triggers
         y = convert_triggers_animate_inanimate(y)
 
+        # balance class weights
+        X, y, _= balance_class_weights(X, y)
+        
         # equalize number of trials (so all sessions have the same number of trials)
         X, y = equal_trials(X, y, 588)
 
