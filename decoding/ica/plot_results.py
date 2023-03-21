@@ -10,6 +10,20 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 alpha = 0.05
 
+
+# set parameters for all plots
+plt.rcParams['font.family'] = 'times new roman'
+plt.rcParams['image.cmap'] = 'RdBu_r'
+plt.rcParams['image.interpolation'] = 'bilinear'
+plt.rcParams['axes.labelsize'] = 14
+plt.rcParams['axes.titlesize'] = 14
+plt.rcParams['xtick.labelsize'] = 12
+plt.rcParams['ytick.labelsize'] = 12
+plt.rcParams['legend.fontsize'] = 10
+plt.rcParams['legend.title_fontsize'] = 12
+plt.rcParams['figure.titlesize'] = 14
+plt.rcParams['figure.dpi'] = 300
+
 def session_plots_individual(accuracies: dict, alpha: float = 0.05, n_trials: int = 588):
     """
     Plots the results of the TGM decoding for each session individually.
@@ -62,6 +76,18 @@ def main_plot_generator():
     ica = np.mean(ica, axis=0)
     ax[1] = plot.plot_tgm_ax(ica, ax[1], vmin=20, vmax=80, chance_level=chance_level(588, alpha = alpha, p = 0.5))
     ax[1].set_title('ICA')
+    
+    # add subplot for colorbar
+    divider = make_axes_locatable(ax[1])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cbar = plt.colorbar(ax[1].images[0], cax=cax)
+    cbar.set_label('Accuracy (%)')
+
+    # making sure to align the plots correctly after adding the colorbar to the other axis
+    divider = make_axes_locatable(ax[0])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cax.axis('off')
+
 
     plt.tight_layout()
 
