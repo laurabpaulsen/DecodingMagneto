@@ -5,13 +5,29 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 
 class Decoder():
-    def __init__(self, classification, alpha, ncv, scale, model_type = 'LDA', get_tgm = True):
-            self.classification = classification
-            self.alpha = alpha
-            self.ncv = ncv
-            self.scale = scale
-            self.model_type = model_type
-            self.get_tgm = get_tgm
+    def __init__(self, alpha:str or float, ncv:int, model_type:str = "LDA", classification:bool = True, get_tgm:bool = True, verbose:bool = True):
+        """
+        Parameters
+        ----------
+        alpha : str or float
+            alpha level for LDA or RidgeClassifier
+        ncv : int
+            number of cross validation folds
+        model_type : str, optional
+            model type, by default "LDA" (Linear Discriminant Analysis). Currently only LDA and RidgeClassifier are supported
+        classification : bool, optional
+            classification or regression, by default True
+        get_tgm : bool, optional
+            get time generalization matrix, by default True
+        verbose : bool, optional
+            print progress, by default True
+        """
+        self.classification = classification
+        self.alpha = alpha
+        self.ncv = ncv
+        self.model_type = model_type
+        self.get_tgm = get_tgm
+        self.verbose = verbose
 
 
     def check_y_format(self,y):
@@ -57,8 +73,9 @@ class Decoder():
 
         scores = self.empty_accuracy_array(T)
 
-
         for c in range(self.ncv):
+            if self.verbose:
+                print('Cross validation: ', c+1, '/', self.ncv)
             inds_cv_test = inds[int(len(inds)/self.ncv) * c : int(len(inds)/self.ncv)*(c+1)]
 
             X_test = X[:, inds_cv_test, :]
@@ -110,6 +127,8 @@ class Decoder():
         scores = self.empty_accuracy_array(T)
 
         for c in range(self.ncv):
+            if self.verbose:
+                print('Cross validation: ', c+1, '/', self.ncv)
             inds_tmp_train = inds_train[:]
             inds_tmp_train = np.delete(inds_tmp_train, slice(int(len(inds_tmp_train)/self.ncv) * c, int(len(inds_tmp_train)/self.ncv)*(c+1)))
             
