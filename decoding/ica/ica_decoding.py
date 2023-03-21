@@ -38,9 +38,13 @@ def parse_args():
     if args.ica not in ['ica', 'no_ica']:
         raise ValueError('Input can only be ica or no_ica')
     
+    # check if n_jobs is valid
+    if args.n_jobs > multiprocessing.cpu_count():
+        raise ValueError('Number of jobs cannot be larger than number of cpus')
+    
     return args
 
-def decode_session(list_of_sessions, session_number, ica):
+def decode_session(list_of_sessions:list, session_number:int, ica:str, decoder:Decoder):
     """
     Within session decoding on a single session. Reads in the data, converts the triggers, balances the class weights, runs decoding and saves the results.
     
@@ -52,6 +56,8 @@ def decode_session(list_of_sessions, session_number, ica):
         the session number
     ica : str
         ica or no_ica
+    decoder : Decoder
+        decoder object
     
     Returns
     -------
@@ -97,7 +103,7 @@ def main():
     path = os.path.join(os.pathsep, 'media', '8.1', 'final_data', 'laurap', 'epochs')
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
     
-    decoder = Decoder(classification=args.classification, ncv = args.ncv, alpha = args.alpha, scale = True, model_type = args.model_type, get_tgm=args.get_tgm)
+    decoder = Decoder(classification=args.classification, ncv = args.ncv, alpha = args.alpha, model_type = args.model_type, get_tgm=args.tgm)
     
     # check if accuracies folder exists, if not create it
     if not os.path.exists('accuracies'):
@@ -112,7 +118,7 @@ def main():
     pool = multiprocessing.Pool(processes = args.n_jobs)
 
     for session_number, session in enumerate(sesh):
-        pool.apply_async(decode_session, args=(session, session_number, args.ica))
+        pool.apply_async(decode_session, args=(session, session_number, args.ica, decoder))
     
     pool.close()
     pool.join()

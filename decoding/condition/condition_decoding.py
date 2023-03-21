@@ -72,7 +72,7 @@ if __name__ in "__main__":
 
     # run decoding
     logging.info('Running decoding...')
-    decoder = Decoder(classification=True, ncv=10, alpha='auto', scale=True, model_type='LDA', get_tgm=True)
+    decoder = Decoder(classification=True, ncv=10, alpha='auto', model_type='LDA', get_tgm=True)
     accuracies = decoder.run_decoding(X, y)
 
     # check if directory exists if not create it

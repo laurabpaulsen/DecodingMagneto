@@ -72,7 +72,7 @@ def get_accuracy(input:tuple):
     start = perf_counter()
     (session_train, session_test, idx, ncv, alpha) = input # unpacking input tuple
 
-    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, scale = True, model_type = model_type, get_tgm=True)
+    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm=True)
 
     if session_test == session_train: # avoiding double dipping within session, by using within session decoder
         X = Xs[session_train]
