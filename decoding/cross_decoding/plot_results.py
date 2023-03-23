@@ -10,6 +10,7 @@ from utils.analysis.tools import chance_level
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import seaborn as sns
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 alpha = 0.05
@@ -27,6 +28,16 @@ plt.rcParams['legend.title_fontsize'] = 12
 plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
+def determine_linestyle(train_condition, test_condition):
+    if train_condition == test_condition:
+        return "-"
+    elif train_condition != test_condition:
+        return "--"
+    
+def determine_colour(i, j):
+    colors = sns.color_palette("Blues_r", 15)
+
+    return colors[abs(i-j)]
 
 def add_diagonal_line(ax):
     """
@@ -180,6 +191,103 @@ def plot_diagonals(acc_dict, title = 'diagonals', save_path = None):
         plt.savefig(save_path)
 
 
+def cross_diags_per_sesh(accuracies, save_path = None):
+    diagonals = np.diagonal(accuracies, axis1=2, axis2=3)
+
+    condition = ["vis", "vis", "vis", "vis", "vis", "vis", "vis", "mem", "mem", "mem", "mem"]
+    
+    fig, axs = plt.subplots(4, 3, figsize = (30, 25), dpi = 300, sharex = True, sharey = True)
+
+    for i, ax in enumerate(axs.flatten()):
+
+        if ax != axs.flatten()[-1]: 
+            # title
+            ax.set_title(f'Training on session {i+1}')
+            
+            # plot the diagonal
+            for j in range(11):
+                # determine line type
+                line_style = determine_linestyle(condition[i], condition[j])
+
+                # determine colour (depending on how far away the train sesh and test sesh are)
+                col = determine_colour(i, j)
+                    
+                ax.plot(diagonals[i, j], color = col, alpha = 1, linewidth = 1, linestyle = line_style)
+
+        # legend in last ax
+        else:
+            ax.axis('off')
+            # add info to the legend
+            for j in range(11):
+                # determine colour (depending on how far away the train sesh and test sesh are)
+                col = determine_colour(0, j)
+                ax.plot([], [], color = col, alpha = 1,  linewidth = 1, label = f'{j}')
+            
+            ax.legend(title = 'Distance between training and test session',  ncol=len(condition), loc = 'center', bbox_to_anchor = (0.5, 0.5))
+    # add labels
+    fig.supylabel('Accuracy (%)')
+    fig.supxlabel('Samples')
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+
+def cross_diags_average_sesh(accuracies, save_path = None):
+    diagonals = np.diagonal(accuracies, axis1=2, axis2=3)
+
+    # create 11 by 11 matrix with distances between sessions
+    # empty matrix
+    distances = np.zeros((11, 11))
+
+    # fill in the matrix
+    for i in range(11):
+        for j in range(11):
+            distances[i, j] = abs(i-j)
+    fig, ax = plt.subplots(1, 1, figsize = (20, 15), dpi = 300)
+
+    # loop over all distances
+    for dist in range(11):
+        # skip distance 0
+        if dist == 0:
+            pass
+        else:
+            # get the indices of the sessions that are dist away from each other
+            indices = np.argwhere(distances == dist)
+
+            # get the average accuracy for each pair of sessions that are dist away from each other
+            tmp = np.array([diagonals[i, j] for i, j in indices])
+
+            # standard deviation
+            tmp_std = tmp.std(axis = 0)
+            tmp_acc = tmp.mean(axis = 0)
+
+            colour = determine_colour(12, dist)
+            
+            # plot tmp acc
+            ax.plot(tmp_acc, label = f'{dist} sessions apart', linewidth = 1, color = colour)
+
+            # standard error
+            tmp_std = tmp_std / np.sqrt(tmp.shape[0])
+
+            # plot standard error
+            ax.fill_between(np.arange(0, 250), (tmp_acc - tmp_std), (tmp_acc + tmp_std), alpha = 0.1, color =colour)
+            
+            # plot legend
+            ax.legend(loc = 'upper right')
+
+
+    # add title and labels
+    fig.suptitle('Average cross-decoding accuracies for different "distances" between training and test session', fontsize = 25)
+    ax.set_title("Note: the longer the distance the fewer pairs there are (e.g., 2 pairs for dist 10, 4 pairs for dist 9 ... 20 pairs for dist 1) \n that is, there is more uncertainty in the average accuracy for longer distances", fontsize = 20)
+
+    fig.supylabel('Accuracy (%)')
+    fig.supxlabel('Samples')
+    
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path)
+
 def main_plot_generator():
     accuracies_cross = {} # not including testing and training on the same session
     accuracies = {} # including testing and training on the same session
@@ -190,6 +298,11 @@ def main_plot_generator():
 
         # plot all pairs of sessions in one figure
         plot_cross_decoding_matrix(accuracies[parc], parc)
+
+        # plot diagonals per session
+        cross_diags_per_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals.png'))
+        # average over all sessions
+        cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'))
 
         # set within session accuracies to nan
         acc1 = accuracies[parc].copy()
@@ -204,10 +317,9 @@ def main_plot_generator():
         # plot averaged according to conditions and using cross-session pairs
         plot_train_test_condition(acc1, parc, diff_colour='red')
 
+
+    # Diagonals of the parcellations together
     plot_diagonals(accuracies_cross, title = 'Diagonals across sessions', save_path = os.path.join('plots', f'diagonals_across.png'))
-
-
-        
     plot_diagonals(accuracies, title = 'Diagonals within session', save_path = os.path.join('plots', f'diagonals_within.png'), )
 
 
