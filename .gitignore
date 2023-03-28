@@ -127,3 +127,28 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# DS_Store
+.DS_Store
+
+# plot folders for now
+*plots*
+
+# accuracy files for now
+*accuracies*.npy
+
+# all npy files
+*.npy
+
+# all pkl files
+*.pkl
+
+
+# vs code workspace
+laurap.code-workspace
+
+# everything in the trash folder + the trash folder
+trash/
+
+*permutation_results*
