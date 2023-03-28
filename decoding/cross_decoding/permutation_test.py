@@ -20,6 +20,19 @@ import argparse
 import multiprocessing as mp
 
 
+# set parameters for all plots
+plt.rcParams['font.family'] = 'times new roman'
+plt.rcParams['image.cmap'] = 'RdBu_r'
+plt.rcParams['image.interpolation'] = 'bilinear'
+plt.rcParams['axes.labelsize'] = 14
+plt.rcParams['axes.titlesize'] = 14
+plt.rcParams['xtick.labelsize'] = 12
+plt.rcParams['ytick.labelsize'] = 12
+plt.rcParams['legend.fontsize'] = 10
+plt.rcParams['legend.title_fontsize'] = 12
+plt.rcParams['figure.titlesize'] = 14
+plt.rcParams['figure.dpi'] = 300
+
 def parse_args():
     ap = argparse.ArgumentParser()
 
@@ -169,7 +182,7 @@ def plot_values(array, save_path=None):
     cbar = ax.figure.colorbar(im, ax=ax)
     cbar.ax.set_ylabel('Difference in true mean accuracy compared to difference in permuted accuracy', rotation=-90, va="bottom")
 
-    
+    plt.tight_layout()
 
     if save_path:
         plt.savefig(save_path)
@@ -186,9 +199,9 @@ def main():
     vis_vis = acc[:7, :7]
 
     # how many timepoints to combine during the permutation test (e.g. n = 5 means that 5 timepoints are combined into one)
-    n = 5
+    n_time = 5
 
-    p_values, diff_stats = tgm_permutation(mem_mem, vis_vis, statistic, n=n)
+    p_values, diff_stats = tgm_permutation(mem_mem, vis_vis, statistic, n=n_time)
 
     # save the p-values and difference in statistics
     np.save(os.path.join('permutation_results', f"p_values_{args.parcellation}.npy"), p_values)
