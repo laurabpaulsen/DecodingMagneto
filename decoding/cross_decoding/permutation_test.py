@@ -4,13 +4,13 @@ This script performs a permutation test on the cross decoding results.
 dev notes:
 - for now only testing the difference between mem_mem and vis_vis
 - maybe move these functions to utils.analysis??
+- add possiblility to not use multiprocessing
 
 """
 
 import sys
 import pathlib
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
-from utils.analysis import plot
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -173,14 +173,14 @@ def permutation(acc1, acc2, statistic):
     return p_value, diff_statistic
 
 def plot_values(array, save_path=None):
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(8, 8))
     im = ax.imshow(array, cmap='Reds', origin='lower', interpolation = None)
 
     ax.set_xlabel('Testing time')
     ax.set_ylabel('Training time')
-    fig.suptitle('Permutation test')
-    cbar = ax.figure.colorbar(im, ax=ax)
-    cbar.ax.set_ylabel('Difference in true mean accuracy compared to difference in permuted accuracy', rotation=-90, va="bottom")
+    fig.suptitle('Permutation test (vis_vis and mem_mem)', fontsize=20)
+    cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.ax.set_ylabel('Difference in true mean accuracy minus the difference in permuted accuracy', rotation=-90, va="bottom")
 
     plt.tight_layout()
 
