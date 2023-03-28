@@ -198,6 +198,8 @@ def cross_diags_per_sesh(accuracies, save_path = None):
     
     fig, axs = plt.subplots(4, 3, figsize = (30, 25), dpi = 300, sharex = True, sharey = True)
 
+    order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6]
+
     for i, ax in enumerate(axs.flatten()):
 
         if ax != axs.flatten()[-1]: 
@@ -210,9 +212,9 @@ def cross_diags_per_sesh(accuracies, save_path = None):
                 line_style = determine_linestyle(condition[i], condition[j])
 
                 # determine colour (depending on how far away the train sesh and test sesh are)
-                col = determine_colour(i, j)
+                col = determine_colour(order[i], order[j])
                     
-                ax.plot(diagonals[i, j], color = col, alpha = 1, linewidth = 1, linestyle = line_style)
+                ax.plot(diagonals[order[i], order[j]], color = col, alpha = 1, linewidth = 1, linestyle = line_style)
 
         # legend in last ax
         else:
@@ -239,10 +241,11 @@ def cross_diags_average_sesh(accuracies, save_path = None):
     # empty matrix
     distances = np.zeros((11, 11))
 
+    order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6]
     # fill in the matrix
     for i in range(11):
         for j in range(11):
-            distances[i, j] = abs(i-j)
+            distances[i, j] = abs(order[i]-order[j])
     fig, ax = plt.subplots(1, 1, figsize = (20, 15), dpi = 300)
 
     # loop over all distances
