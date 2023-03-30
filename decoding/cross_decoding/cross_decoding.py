@@ -127,7 +127,7 @@ def equal_trials(X, y, n: int):
     return X, y
 
 
-if __name__ == '__main__':
+def main():
 
     """ -------- PARSE ARGUMENTS -------- """
 
@@ -197,3 +197,6 @@ if __name__ == '__main__':
 
     np.save(output_path, accuracies)
     
+
+if __name__ == '__main__':
+    main()
