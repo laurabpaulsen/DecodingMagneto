@@ -28,7 +28,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')
     parser.add_argument('--model_type', type=str, default='LDA', help='Model type. Can be either LDA or RidgeClassifier.')
     parser.add_argument('--n_jobs', type=int, default=1, help='Number of cores to use.')
-    parser.add_argument('--ncv', type=int, default=3, help='Number of cross validation folds.')
+    parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
     parser.add_argument('--alpha', type=str, default='auto', help='Regularization parameter. Can be either auto or float.')
 
     args = parser.parse_args()
@@ -135,24 +135,36 @@ def main():
     # get triggers for equal number of trials per condition (27 animate and 27 inanimate)
     triggers = get_triggers_equal()
 
+
+    # preparing the data for decoding
+    for i, session_list in enumerate(sessions):
+        if i == 0:
+            Xs, ys = prep_data_split(session_list, triggers, n_splits=11) 
+        else:
+            Xs_tmp, ys_tmp = prep_data_split(session_list, triggers, n_splits=11)
+            
+            # loop over splits
+            for j, (X, y) in enumerate(zip(Xs_tmp, ys_tmp)):
+                Xs[j] = np.concatenate((Xs[j], X), axis=1)
+                ys[j] = np.concatenate((ys[j], y), axis=0)
+
+    # Make sure all splits have the same number of trials
+    Xs, ys = equalise_trials(Xs, ys)
+
     # preparing the decoder
     decoder = Decoder(classification=True, ncv=args.ncv, alpha=args.alpha, model_type=args.model_type, get_tgm = True, verbose=False)
 
-    # loop over sessions
-    for i, session_list in enumerate(sessions):
-        Xs, ys = prep_data_split(session_list, triggers, n_splits=11)
-
-        # get accuracies
-        accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
+    # get accuracies
+    accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
         
-        # save accuracies
-        out_path = path / "accuracies_within" / f"within_session_{i}.npy"
+    # save accuracies
+    out_path = path / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}.npy"
         
-        # ensure accuracy directory exists
-        if not out_path.parent.exists():
-            out_path.parent.mkdir(parents=True)
+    # ensure accuracy directory exists
+    if not out_path.parent.exists():
+        out_path.parent.mkdir(parents=True)
             
-        np.save(out_path, accuracies)
+    np.save(out_path, accuracies)
 
 
 if __name__ == '__main__':
