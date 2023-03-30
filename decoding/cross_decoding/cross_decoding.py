@@ -9,6 +9,7 @@ import os
 import multiprocessing as mp
 from time import perf_counter
 import argparse
+from functools import partial
 
 # local imports
 import sys
@@ -57,7 +58,7 @@ def prep_data(sessions, triggers, parc, path, event_path):
     
     return Xs, ys
 
-def get_accuracy(input:tuple):
+def get_accuracy(input:tuple, Xs, ys, classification:bool=True, ncv:int=10, alpha:str='auto', model_type:str='LDA'):
     """
     This function is used to decode both source and sensor space data using cross decoding.
 
@@ -184,8 +185,11 @@ def main():
     # empty array to store accuracies in
     accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0]), dtype=float)
 
+    # using partial to pass arguments to function that are not changing
+    multi_parse = partial(get_accuracy, Xs, ys, classification=classification, model_type=model_type, get_tgm=get_tgm)
+
     with mp.Pool(n_jobs) as p:
-        for train_session, test_session, accuracy in p.map(get_accuracy, decoding_inputs):
+        for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
             accuracies[train_session, test_session, :, :] = accuracy
     
     p.close()
