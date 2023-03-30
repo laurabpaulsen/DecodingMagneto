@@ -71,7 +71,7 @@ def get_accuracy(input:tuple, Xs, ys, classification:bool=True, ncv:int=10, alph
         tuple: tuple containing session_train, session_test and accuracy
     """
     start = perf_counter()
-    (session_train, session_test, idx, ncv, alpha) = input # unpacking input tuple
+    (session_train, session_test, idx) = input # unpacking input tuple
 
     decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm=True)
 
@@ -178,13 +178,13 @@ def main():
         Xs[i], ys[i] = equal_trials(X, y, min_trials)
 
     # preparing decoding inputs for multiprocessing
-    decoding_inputs = [(train_sesh, test_sesh, idx*i+i, ncv, alpha) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
+    decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
 
     # empty array to store accuracies in
     accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0]), dtype=float)
 
     # using partial to pass arguments to function that are not changing
-    multi_parse = partial(get_accuracy, Xs, ys, classification=classification, model_type=model_type, get_tgm=get_tgm)
+    multi_parse = partial(get_accuracy, Xs, ys, classification=classification, model_type=model_type, get_tgm=get_tgm, alpha=alpha, ncv=ncv)
 
     with mp.Pool(n_jobs) as p:
         for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
