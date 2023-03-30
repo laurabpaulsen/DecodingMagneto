@@ -195,10 +195,11 @@ def main():
     p.close()
     p.join()
 
-    # saving accuracies to file
-    if not Path.exists('accuracies'):
-        Path.mkdir('accuracies')
+    # saving accuracies
 
+    # making sure output path exists
+    if not output_path.parent.exists():
+        output_path.parent.mkdir(parents=True)
     np.save(output_path, accuracies)
     
 
