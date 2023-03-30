@@ -10,6 +10,7 @@ import multiprocessing as mp
 from time import perf_counter
 import argparse
 from functools import partial
+from pathlib import Path
 
 # local imports
 import sys
@@ -142,8 +143,9 @@ def main():
     ncv = args.ncv
     alpha = args.alpha
 
-    output_path = os.path.join('accuracies', f'cross_decoding_10_{model_type}_{parc}.npy')
-
+    # defining outpath
+    path = Path(__file__)
+    output_path = path / "accuracies" / f'cross_decoding_{ncv}_{model_type}_{parc}.npy'
 
     # define logger
     logger = logging.getLogger(__name__)
@@ -194,8 +196,8 @@ def main():
     p.join()
 
     # saving accuracies to file
-    if not os.path.exists('accuracies'):
-        os.mkdir('accuracies')
+    if not Path.exists('accuracies'):
+        Path.mkdir('accuracies')
 
     np.save(output_path, accuracies)
     
