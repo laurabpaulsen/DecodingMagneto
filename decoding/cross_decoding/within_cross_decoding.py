@@ -69,21 +69,21 @@ def prep_data_split(session_list, triggers, n_splits:int=11):
     ys = np.array_split(y, n_splits)
 
     # balance class weights
-    for i, X, y in enumerate(zip(Xs, ys)):
+    for i, (X, y) in enumerate(zip(Xs, ys)):
         Xs[i], ys[i], _ = balance_class_weights(X, y)
 
         print(f'X shape: {X.shape}, y shape: {y.shape}')
 
-        # save the max number of trials
+        # save the minumum number of trials
         if i == 0:
-            max_trials = X.shape[1]
+            min_trials = X.shape[1]
         else:
-            if X.shape[1] > max_trials:
-                max_trials = X.shape[1]
+            if X.shape[1] < min_trials:
+                min_trials = X.shape[1]
 
     # equalize number of trials
-    for i, X, y in enumerate(zip(Xs, ys)):
-        Xs[i], ys[i] = equal_trials(X, y, max_trials)
+    for i, (X, y) in enumerate(zip(Xs, ys)):
+        Xs[i], ys[i] = equal_trials(X, y, min_trials)
     
     return Xs, ys
 
@@ -93,7 +93,6 @@ def main():
     classification = True
     model_type = args.model_type
     get_tgm = True
-    parc = args.parc
     n_jobs = args.n_jobs
     ncv = args.ncv
     alpha = args.alpha
