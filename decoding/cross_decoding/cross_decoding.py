@@ -130,7 +130,7 @@ def main():
     parc = args.parc
     ncv = args.ncv
 
-    # defining outpath
+    # defining paths
     path = Path(__file__)
     output_path = path / "accuracies" / f'cross_decoding_{ncv}_{args.model_type}_{parc}.npy'
     data_path = path.parents[6] / 'data' / 'final_data' / 'laurap' / 'source_space' / 'parcelled' / parc
