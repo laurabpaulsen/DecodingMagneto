@@ -59,7 +59,7 @@ def prep_data(sessions, triggers, parc, path, event_path):
     
     return Xs, ys
 
-def get_accuracy(Xs:list, ys:list, input:tuple, classification:bool=True, ncv:int=10, alpha:str='auto', model_type:str='LDA', get_tgm:bool=True):
+def get_accuracy(Xs:list, ys:list, decoder:Decoder, input:tuple):
     """
     This function is used to decode both source and sensor space data using cross decoding.
 
@@ -69,6 +69,8 @@ def get_accuracy(Xs:list, ys:list, input:tuple, classification:bool=True, ncv:in
         list of X arrays
     ys : list
         list of y arrays
+    decoder : Decoder
+        Decoder object
     input : tuple
         tuple containing ind_train, ind_test and idx
     classification : bool, optional
@@ -85,21 +87,11 @@ def get_accuracy(Xs:list, ys:list, input:tuple, classification:bool=True, ncv:in
 
     (ind_train, ind_test, idx) = input # unpacking input tuple
 
-    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm=True)
-
     if ind_test == ind_train: # avoiding double dipping within session, by using within session decoder
-        X = Xs[ind_train]
-        y = ys[ind_train]
-        accuracy = decoder.run_decoding(X, y)
+        accuracy = decoder.run_decoding(Xs[ind_train], ys[ind_train])
 
-    else:
-        X_train = Xs[ind_train]
-        X_test = Xs[ind_test]
-
-        y_train = ys[ind_train]
-        y_test = ys[ind_test]
-
-        accuracy = decoder.run_decoding_across_sessions(X_train, y_train, X_test, y_test)
+    else: # using cross decoding
+        accuracy = decoder.run_decoding_across_sessions(Xs[ind_train], ys[ind_train], Xs[ind_test], ys[ind_test])
     
     end = perf_counter()
 
@@ -108,14 +100,11 @@ def get_accuracy(Xs:list, ys:list, input:tuple, classification:bool=True, ncv:in
     return ind_train, ind_test, accuracy
 
 def main():
-
     """ -------- PARSE ARGUMENTS -------- """
-
     args = parse_args()
 
     classification = True
     model_type = args.model_type
-    get_tgm = True
     parc = args.parc
     n_jobs = args.n_jobs
     ncv = args.ncv
@@ -163,8 +152,11 @@ def main():
     # empty array to store accuracies in
     accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0]), dtype=float)
 
+    # preparing the decoder
+    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm=True)
+
     # using partial to pass arguments to function that are not changing
-    multi_parse = partial(get_accuracy, Xs, ys, classification=classification, model_type=model_type, get_tgm=get_tgm, alpha=alpha, ncv=ncv)
+    multi_parse = partial(get_accuracy, Xs, ys, decoder)
 
     with mp.Pool(n_jobs) as p:
         for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
@@ -173,11 +165,12 @@ def main():
     p.close()
     p.join()
 
-    # saving accuracies
 
     # making sure output path exists
     if not output_path.parent.exists():
         output_path.parent.mkdir(parents=True)
+   
+    # saving accuracies
     np.save(output_path, accuracies)
     
 
