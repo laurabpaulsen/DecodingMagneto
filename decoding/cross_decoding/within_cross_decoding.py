@@ -135,7 +135,6 @@ def main():
     # get triggers for equal number of trials per condition (27 animate and 27 inanimate)
     triggers = get_triggers_equal()
 
-
     # preparing the data for decoding
     for i, session_list in enumerate(sessions):
         if i == 0:
