@@ -18,7 +18,7 @@ import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
 from utils.data.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
-from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights
+from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights, equal_trials
 from utils.analysis.decoder import Decoder
 
 
