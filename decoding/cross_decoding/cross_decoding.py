@@ -59,7 +59,7 @@ def prep_data(sessions, triggers, parc, path, event_path):
     
     return Xs, ys
 
-def get_accuracy(input:tuple, Xs, ys, classification:bool=True, ncv:int=10, alpha:str='auto', model_type:str='LDA'):
+def get_accuracy(input:tuple, Xs, ys, classification:bool=True, ncv:int=10, alpha:str='auto', model_type:str='LDA', get_tgm:bool=True):
     """
     This function is used to decode both source and sensor space data using cross decoding.
 
