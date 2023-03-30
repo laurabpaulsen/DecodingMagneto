@@ -20,15 +20,15 @@ import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
 from utils.data.concatenate import read_and_concate_sessions
-from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights, equal_trials
+from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights
 from utils.analysis.decoder import Decoder
-from cross_decoding import get_accuracy
+from cross_decoding import get_accuracy, equalise_trials
 
 def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')
     parser.add_argument('--model_type', type=str, default='LDA', help='Model type. Can be either LDA or RidgeClassifier.')
     parser.add_argument('--n_jobs', type=int, default=1, help='Number of cores to use.')
-    parser.add_argument('--ncv', type=int, default=5, help='Number of cross validation folds.')
+    parser.add_argument('--ncv', type=int, default=3, help='Number of cross validation folds.')
     parser.add_argument('--alpha', type=str, default='auto', help='Regularization parameter. Can be either auto or float.')
 
     args = parser.parse_args()
@@ -70,30 +70,63 @@ def prep_data_split(session_list:list, triggers:list, n_splits:int=11):
 
     # balance class weights
     for i, (X, y) in enumerate(zip(Xs, ys)):
-        X, y, _ = balance_class_weights(X, y)
+        Xs[i], ys[i], _ = balance_class_weights(X, y)
 
         # save the minumum number of trials
         if i == 0:
-            min_trials = X.shape[1]
+            min_trials = Xs[i].shape[1]
         else:
-            if X.shape[1] < min_trials:
-                min_trials = X.shape[1]
+            if Xs[i].shape[1] < min_trials:
+                min_trials = Xs[i].shape[1]
 
-    # equalize number of trials
-    for i, (X, y) in enumerate(zip(Xs, ys)):
-        Xs[i], ys[i] = equal_trials(X, y, min_trials)
+    # equalize number of trials in each split to the minimum number of trials
+    Xs, ys = equalise_trials(Xs, ys)
     
     return Xs, ys
+
+def get_accuracy_session(Xs:list, ys:list, decoder:Decoder, n_jobs:int=1):
+    """
+    Runs decoding analysis on one session.
+
+    Parameters
+    ----------
+    Xs : list
+        List of X arrays from one session with all splits.
+    ys : list
+        List of y arrays from one session with all splits.
+    n_jobs : int
+        Number of cores to use. Default is 1.
+    decoder : Decoder
+        Decoder object.
+
+    Returns
+    -------
+    accuracies : np.ndarray
+        Array of accuracies for each pair of splits.
+    """
+
+    # empty array to store accuracies
+    accuracies = np.zeros((len(Xs), len(Xs)))
+
+    # loop over all pairs of sessions
+    decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
+
+    # using partial to pass arguments to function that are not changing
+    multi_parse = partial(get_accuracy, Xs, ys, decoder)
+
+    # multiprocessing
+    with mp.Pool(n_jobs) as p:
+        for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
+            accuracies[train_session, test_session, :, :] = accuracy
+        
+    p.close()
+    p.join()
+
+    return accuracies
 
 
 def main():
     args = parse_args()
-    classification = True
-    model_type = args.model_type
-    get_tgm = True
-    n_jobs = args.n_jobs
-    ncv = args.ncv
-    alpha = args.alpha
 
     path = Path(__file__)
 
@@ -103,29 +136,15 @@ def main():
     triggers = get_triggers_equal()
 
     # preparing the decoder
-    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm = get_tgm, verbose=False)
+    decoder = Decoder(classification=True, ncv=args.ncv, alpha=args.alpha, model_type=args.model_type, get_tgm = True, verbose=False)
 
     # loop over sessions
     for i, session_list in enumerate(sessions):
         Xs, ys = prep_data_split(session_list, triggers, n_splits=11)
 
-        # empty array to store accuracies
-        accuracies = np.zeros((len(Xs), len(Xs)))
-
-        # loop over all pairs of sessions
-        decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
-
-        # using partial to pass arguments to function that are not changing
-        multi_parse = partial(get_accuracy, Xs, ys, decoder)
-
-        # multiprocessing
-        with mp.Pool(n_jobs) as p:
-            for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
-                accuracies[train_session, test_session, :, :] = accuracy
+        # get accuracies
+        accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
         
-        p.close()
-        p.join()
-
         # save accuracies
         out_path = path / "accuracies_within" / f"within_session_{i}.npy"
         

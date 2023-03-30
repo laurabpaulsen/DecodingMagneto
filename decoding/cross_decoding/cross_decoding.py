@@ -96,20 +96,43 @@ def get_accuracy(Xs:list, ys:list, decoder:Decoder, input:tuple):
 
     return ind_train, ind_test, accuracy
 
-def main():
-    """ -------- PARSE ARGUMENTS -------- """
-    args = parse_args()
+def equalise_trials(Xs:list, ys:list):
+    """
+    This function is used to equalise the number of trials across a list of X and y arrays.
 
-    classification = True
-    model_type = args.model_type
+    Parameters
+    ----------
+    Xs : list
+        list of X arrays
+    ys : list
+        list of y arrays
+    
+    Returns
+    -------
+    Xs : list
+        list of X arrays
+    ys : list
+        list of y arrays
+    """
+    n_trials = [len(y) for y in ys]
+    
+    # min number of trials
+    min_trials = min(n_trials)
+
+    # make sure all sessions have the same number of trials
+    for i,(X, y) in enumerate(zip(Xs, ys)):
+        Xs[i], ys[i] = equal_trials(X, y, min_trials)
+
+    return Xs, ys
+
+def main():
+    args = parse_args()
     parc = args.parc
-    n_jobs = args.n_jobs
     ncv = args.ncv
-    alpha = args.alpha
 
     # defining outpath
     path = Path(__file__)
-    output_path = path / "accuracies" / f'cross_decoding_{ncv}_{model_type}_{parc}.npy'
+    output_path = path / "accuracies" / f'cross_decoding_{ncv}_{args.model_type}_{parc}.npy'
     data_path = path.parents[6] / 'data' / 'final_data' / 'laurap' / 'source_space' / 'parcelled' / parc
     event_path = path.parents[2] / 'info_files' / 'events'
 
@@ -118,8 +141,7 @@ def main():
 
     # log info
     logger.info(f'Running cross decoding with the following parameters...')
-    logger.info(f'Classification: {classification}')
-    logger.info(f'Number of cross validation folds: 10')
+    logger.info(f'Number of cross validation folds: {ncv}')
     logger.info(f'Parcellation: {parc}')
 
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
@@ -133,14 +155,8 @@ def main():
     if parc != 'sens': 
         Xs = [flip_sign(Xs[0], X) for X in Xs]
 
-    n_trials = [X.shape[1] for X in Xs]
-    
-    # max number of trials
-    min_trials = min(n_trials)
-
-    # make sure all sessions have the same number of trials
-    for i,(X, y) in enumerate(zip(Xs, ys)):
-        Xs[i], ys[i] = equal_trials(X, y, min_trials)
+    # equalising number of trials
+    Xs, ys = equalise_trials(Xs, ys)
 
     # preparing decoding inputs for multiprocessing
     decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
@@ -149,12 +165,12 @@ def main():
     accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0]), dtype=float)
 
     # preparing the decoder
-    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm=True)
+    decoder = Decoder(classification=True, ncv = ncv, alpha = args.alpha, model_type = args.model_type, get_tgm=True)
 
     # using partial to pass arguments to function that are not changing
     multi_parse = partial(get_accuracy, Xs, ys, decoder)
 
-    with mp.Pool(n_jobs) as p:
+    with mp.Pool(args.n_jobs) as p:
         for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
             accuracies[train_session, test_session, :, :] = accuracy
     
