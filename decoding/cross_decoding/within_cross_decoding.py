@@ -21,14 +21,14 @@ sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent direct
 
 from utils.data.concatenate import read_and_concate_sessions
 from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights, equal_trials
-
+from utils.analysis.decoder import Decoder
 from cross_decoding import get_accuracy
 
 def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')
     parser.add_argument('--model_type', type=str, default='LDA', help='Model type. Can be either LDA or RidgeClassifier.')
-    parser.add_argument('--n_jobs', type=int, default=10, help='Number of cores to use.')
-    parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
+    parser.add_argument('--n_jobs', type=int, default=1, help='Number of cores to use.')
+    parser.add_argument('--ncv', type=int, default=5, help='Number of cross validation folds.')
     parser.add_argument('--alpha', type=str, default='auto', help='Regularization parameter. Can be either auto or float.')
 
     args = parser.parse_args()
@@ -37,7 +37,7 @@ def parse_args():
 
     return args
 
-def prep_data_split(session_list, triggers, n_splits:int=11):
+def prep_data_split(session_list:list, triggers:list, n_splits:int=11):
     """
     Prepares data for decoding by concatenating sessions from the same day and splitting into n_splits.
 
@@ -70,9 +70,7 @@ def prep_data_split(session_list, triggers, n_splits:int=11):
 
     # balance class weights
     for i, (X, y) in enumerate(zip(Xs, ys)):
-        Xs[i], ys[i], _ = balance_class_weights(X, y)
-
-        print(f'X shape: {X.shape}, y shape: {y.shape}')
+        X, y, _ = balance_class_weights(X, y)
 
         # save the minumum number of trials
         if i == 0:
@@ -99,11 +97,13 @@ def main():
 
     path = Path(__file__)
 
-
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
     
     # get triggers for equal number of trials per condition (27 animate and 27 inanimate)
     triggers = get_triggers_equal()
+
+    # preparing the decoder
+    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm = get_tgm)
 
     # loop over sessions
     for i, session_list in enumerate(sessions):
@@ -116,7 +116,7 @@ def main():
         decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
 
         # using partial to pass arguments to function that are not changing
-        multi_parse = partial(get_accuracy, Xs, ys, classification=classification, model_type=model_type, get_tgm=get_tgm, alpha=alpha, ncv=ncv)
+        multi_parse = partial(get_accuracy, Xs, ys, decoder)
 
         # multiprocessing
         with mp.Pool(n_jobs) as p:
