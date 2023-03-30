@@ -44,12 +44,13 @@ def prep_data(sessions, triggers, parc, path, event_path):
 
     for sesh in sessions:
         if parc == 'sens':
-            sesh = [f'{i}-epo.fif' for i in sesh] # WITH ICA - should it be without?
+            sesh = [f'{i}-epo.fif' for i in sesh] # WITH ICA noise components removed
             X, y = read_and_concate_sessions(sesh, triggers)
         else:
             X, y = read_and_concate_sessions_source(path, event_path, sesh, triggers)
         
-        y = convert_triggers_animate_inanimate(y) # converting triggers to animate and inanimate instead of images
+        # converting triggers to animate and inanimate instead of images
+        y = convert_triggers_animate_inanimate(y) 
         
         # balance class weights
         X, y, _ = balance_class_weights(X, y)
@@ -73,15 +74,11 @@ def get_accuracy(Xs:list, ys:list, decoder:Decoder, input:tuple):
         Decoder object
     input : tuple
         tuple containing ind_train, ind_test and idx
-    classification : bool, optional
-        Whether to perform classification or regression. Defaults to classification.
-    ncv : int
-        Number of cross validation folds. Defaults to ncv.
     
     Returns
     -------
-    (session_train, session_test, accuracy) : tuple
-        tuple containing session_train, session_test and accuracy
+    (ind_train, ind_test, accuracy) : tuple
+        tuple containing ind_train, ind_test and accuracy
     """
     start = perf_counter()
 
