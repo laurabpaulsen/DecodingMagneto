@@ -103,7 +103,7 @@ def main():
     triggers = get_triggers_equal()
 
     # preparing the decoder
-    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm = get_tgm)
+    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm = get_tgm, verbose=False)
 
     # loop over sessions
     for i, session_list in enumerate(sessions):
