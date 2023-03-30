@@ -20,9 +20,9 @@ import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
 from utils.data.concatenate import read_and_concate_sessions
-from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights
+from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights, equal_trials
 
-from cross_decoding import equal_trials, get_accuracy
+from cross_decoding import get_accuracy
 
 def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')

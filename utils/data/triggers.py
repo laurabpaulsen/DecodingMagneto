@@ -85,3 +85,44 @@ def balance_class_weights(X, y, verbose = True):
         print(f'{len(y_equal)} remains')
     
     return X_equal, y_equal, remove_ind
+
+
+def equal_trials(X, y, n: int):
+    """
+    Removes trials from X and y, such that the number of trials is equal to n. It is assumed that classes are already balanced. Therefore an equal number of trials is removed from each class.
+
+    Parameters:
+    ----------
+    X : np.array
+        data
+    y : np.array
+        labels (0 or 1)
+    n : int
+        number of trials to keep
+    
+    Returns:
+    -------
+    X : np.array
+        data with n trials
+    y : np.array
+        labels with n trials
+    """
+
+    # total number of trials
+    n_trials = len(y)
+
+    # number of trials to remove per condition
+    n_remove = (n_trials - n)//2
+
+    # getting indices of trials to remove
+    idx_0 = np.random.choice(np.where(y==0)[0], n_remove, replace=False)
+    idx_1 = np.random.choice(np.where(y==1)[0], n_remove, replace=False)
+
+    # combining indices
+    idx = np.concatenate((idx_0, idx_1))
+
+    # removing trials
+    X = np.delete(X, idx, axis=1)
+    y = np.delete(y, idx)
+
+    return X, y

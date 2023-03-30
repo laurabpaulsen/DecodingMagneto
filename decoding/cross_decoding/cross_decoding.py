@@ -59,34 +59,45 @@ def prep_data(sessions, triggers, parc, path, event_path):
     
     return Xs, ys
 
-def get_accuracy(input:tuple, Xs, ys, classification:bool=True, ncv:int=10, alpha:str='auto', model_type:str='LDA', get_tgm:bool=True):
+def get_accuracy(Xs:list, ys:list, input:tuple, classification:bool=True, ncv:int=10, alpha:str='auto', model_type:str='LDA', get_tgm:bool=True):
     """
     This function is used to decode both source and sensor space data using cross decoding.
 
-    Args:
-        input (tuple): tuple containing session_train, session_test and idx
-        classification (bool, optional): whether to perform classification or regression. Defaults to classification.
-        ncv (int, optional): number of cross validation folds. Defaults to ncv.
+    Parameters
+    ----------
+    Xs : list
+        list of X arrays
+    ys : list
+        list of y arrays
+    input : tuple
+        tuple containing ind_train, ind_test and idx
+    classification : bool, optional
+        Whether to perform classification or regression. Defaults to classification.
+    ncv : int
+        Number of cross validation folds. Defaults to ncv.
     
-    Returns:
-        tuple: tuple containing session_train, session_test and accuracy
+    Returns
+    -------
+    (session_train, session_test, accuracy) : tuple
+        tuple containing session_train, session_test and accuracy
     """
     start = perf_counter()
-    (session_train, session_test, idx) = input # unpacking input tuple
+
+    (ind_train, ind_test, idx) = input # unpacking input tuple
 
     decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm=True)
 
-    if session_test == session_train: # avoiding double dipping within session, by using within session decoder
-        X = Xs[session_train]
-        y = ys[session_train]
+    if ind_test == ind_train: # avoiding double dipping within session, by using within session decoder
+        X = Xs[ind_train]
+        y = ys[ind_train]
         accuracy = decoder.run_decoding(X, y)
 
     else:
-        X_train = Xs[session_train]
-        X_test = Xs[session_test]
+        X_train = Xs[ind_train]
+        X_test = Xs[ind_test]
 
-        y_train = ys[session_train]
-        y_test = ys[session_test]
+        y_train = ys[ind_train]
+        y_test = ys[ind_test]
 
         accuracy = decoder.run_decoding_across_sessions(X_train, y_train, X_test, y_test)
     
@@ -94,40 +105,7 @@ def get_accuracy(input:tuple, Xs, ys, classification:bool=True, ncv:int=10, alph
 
     print(f'Finished decoding index {idx} in {round(end-start, 2)} seconds')
 
-    return session_train, session_test, accuracy
-
-def equal_trials(X, y, n: int):
-    """
-    Removes trials from X and y, such that the number of trials is equal to n. It is assumed that classes are already balanced. Therefore an equal number of trials is removed from each class.
-
-    Args:
-        X (np.array): data
-        y (np.array): labels (0 or 1)
-        n (int): number of trials to keep
-    
-    Returns:
-        tuple: tuple containing X and y with n trials
-    """
-
-    # total number of trials
-    n_trials = len(y)
-
-    # number of trials to remove per condition
-    n_remove = (n_trials - n)//2
-
-    # getting indices of trials to remove
-    idx_0 = np.random.choice(np.where(y==0)[0], n_remove, replace=False)
-    idx_1 = np.random.choice(np.where(y==1)[0], n_remove, replace=False)
-
-    # combining indices
-    idx = np.concatenate((idx_0, idx_1))
-
-    # removing trials
-    X = np.delete(X, idx, axis=1)
-    y = np.delete(y, idx)
-
-    return X, y
-
+    return ind_train, ind_test, accuracy
 
 def main():
 
