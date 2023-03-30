@@ -175,9 +175,7 @@ def main():
 
     # make sure all sessions have the same number of trials
     for i,(X, y) in enumerate(zip(Xs, ys)):
-        X, y = equal_trials(X, y, min_trials)
-        Xs[i] = X
-        ys[i] = y
+        Xs[i], ys[i] = equal_trials(X, y, min_trials)
 
     # preparing decoding inputs for multiprocessing
     decoding_inputs = [(train_sesh, test_sesh, idx*i+i, ncv, alpha) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
