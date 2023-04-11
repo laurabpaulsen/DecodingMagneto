@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import json
+from pathlib import Path
 
 def get_triggers_equal():
     """
@@ -34,7 +35,9 @@ def convert_triggers_animate_inanimate(y):
     -------
     y : list or array of animate/inanimate triggers (1 or 0)
     """
-    with open(os.path.join('..', '..', 'info_files', 'event_ids.txt'), 'r') as f:
+    path = Path(__file__)
+
+    with open(path.parents[2] / 'info_files' / 'event_ids.txt', 'r') as f:
         file = f.read()
         event_ids = json.loads(file)
 
