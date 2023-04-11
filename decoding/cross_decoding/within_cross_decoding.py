@@ -106,7 +106,7 @@ def get_accuracy_session(Xs:list, ys:list, decoder:Decoder, n_jobs:int=1):
     """
 
     # empty array to store accuracies
-    accuracies = np.zeros((len(Xs), len(Xs)))
+    accuracies = np.zeros((len(Xs), len(Xs), 250, 250))
 
     # loop over all pairs of sessions
     decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
