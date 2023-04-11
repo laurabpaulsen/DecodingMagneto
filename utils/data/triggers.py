@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import json
+from pathlib import Path
 
 def get_triggers_equal():
     """
@@ -34,7 +35,9 @@ def convert_triggers_animate_inanimate(y):
     -------
     y : list or array of animate/inanimate triggers (1 or 0)
     """
-    with open(os.path.join('..', '..', 'info_files', 'event_ids.txt'), 'r') as f:
+    path = Path(__file__)
+
+    with open(path.parents[2] / 'info_files' / 'event_ids.txt', 'r') as f:
         file = f.read()
         event_ids = json.loads(file)
 
@@ -85,3 +88,44 @@ def balance_class_weights(X, y, verbose = True):
         print(f'{len(y_equal)} remains')
     
     return X_equal, y_equal, remove_ind
+
+
+def equal_trials(X, y, n: int):
+    """
+    Removes trials from X and y, such that the number of trials is equal to n. It is assumed that classes are already balanced. Therefore an equal number of trials is removed from each class.
+
+    Parameters:
+    ----------
+    X : np.array
+        data
+    y : np.array
+        labels (0 or 1)
+    n : int
+        number of trials to keep
+    
+    Returns:
+    -------
+    X : np.array
+        data with n trials
+    y : np.array
+        labels with n trials
+    """
+
+    # total number of trials
+    n_trials = len(y)
+
+    # number of trials to remove per condition
+    n_remove = (n_trials - n)//2
+
+    # getting indices of trials to remove
+    idx_0 = np.random.choice(np.where(y==0)[0], n_remove, replace=False)
+    idx_1 = np.random.choice(np.where(y==1)[0], n_remove, replace=False)
+
+    # combining indices
+    idx = np.concatenate((idx_0, idx_1))
+
+    # removing trials
+    X = np.delete(X, idx, axis=1)
+    y = np.delete(y, idx)
+
+    return X, y

@@ -9,6 +9,8 @@ import os
 import multiprocessing as mp
 from time import perf_counter
 import argparse
+from functools import partial
+from pathlib import Path
 
 # local imports
 import sys
@@ -16,7 +18,7 @@ import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
 from utils.data.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
-from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights
+from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights, equal_trials
 from utils.analysis.decoder import Decoder
 
 
@@ -42,12 +44,13 @@ def prep_data(sessions, triggers, parc, path, event_path):
 
     for sesh in sessions:
         if parc == 'sens':
-            sesh = [f'{i}-epo.fif' for i in sesh] # WITH ICA - should it be without?
+            sesh = [f'{i}-epo.fif' for i in sesh] # WITH ICA noise components removed
             X, y = read_and_concate_sessions(sesh, triggers)
         else:
             X, y = read_and_concate_sessions_source(path, event_path, sesh, triggers)
         
-        y = convert_triggers_animate_inanimate(y) # converting triggers to animate and inanimate instead of images
+        # converting triggers to animate and inanimate instead of images
+        y = convert_triggers_animate_inanimate(y) 
         
         # balance class weights
         X, y, _ = balance_class_weights(X, y)
@@ -57,143 +60,130 @@ def prep_data(sessions, triggers, parc, path, event_path):
     
     return Xs, ys
 
-def get_accuracy(input:tuple):
+def get_accuracy(Xs:list, ys:list, decoder:Decoder, input:tuple):
     """
     This function is used to decode both source and sensor space data using cross decoding.
 
-    Args:
-        input (tuple): tuple containing session_train, session_test and idx
-        classification (bool, optional): whether to perform classification or regression. Defaults to classification.
-        ncv (int, optional): number of cross validation folds. Defaults to ncv.
+    Parameters
+    ----------
+    Xs : list
+        list of X arrays
+    ys : list
+        list of y arrays
+    decoder : Decoder
+        Decoder object
+    input : tuple
+        tuple containing ind_train, ind_test and idx
     
-    Returns:
-        tuple: tuple containing session_train, session_test and accuracy
+    Returns
+    -------
+    (ind_train, ind_test, accuracy) : tuple
+        tuple containing ind_train, ind_test and accuracy
     """
     start = perf_counter()
-    (session_train, session_test, idx, ncv, alpha) = input # unpacking input tuple
 
-    decoder = Decoder(classification=classification, ncv = ncv, alpha = alpha, model_type = model_type, get_tgm=True)
+    (ind_train, ind_test, idx) = input # unpacking input tuple
 
-    if session_test == session_train: # avoiding double dipping within session, by using within session decoder
-        X = Xs[session_train]
-        y = ys[session_train]
-        accuracy = decoder.run_decoding(X, y)
+    if ind_test == ind_train: # avoiding double dipping within session, by using within session decoder
+        accuracy = decoder.run_decoding(Xs[ind_train], ys[ind_train])
 
-    else:
-        X_train = Xs[session_train]
-        X_test = Xs[session_test]
-
-        y_train = ys[session_train]
-        y_test = ys[session_test]
-
-        accuracy = decoder.run_decoding_across_sessions(X_train, y_train, X_test, y_test)
+    else: # using cross decoding
+        accuracy = decoder.run_decoding_across_sessions(Xs[ind_train], ys[ind_train], Xs[ind_test], ys[ind_test])
     
     end = perf_counter()
 
     print(f'Finished decoding index {idx} in {round(end-start, 2)} seconds')
 
-    return session_train, session_test, accuracy
+    return ind_train, ind_test, accuracy
 
-def equal_trials(X, y, n: int):
+def equalise_trials(Xs:list, ys:list):
     """
-    Removes trials from X and y, such that the number of trials is equal to n. It is assumed that classes are already balanced. Therefore an equal number of trials is removed from each class.
+    This function is used to equalise the number of trials across a list of X and y arrays.
 
-    Args:
-        X (np.array): data
-        y (np.array): labels (0 or 1)
-        n (int): number of trials to keep
+    Parameters
+    ----------
+    Xs : list
+        list of X arrays
+    ys : list
+        list of y arrays
     
-    Returns:
-        tuple: tuple containing X and y with n trials
+    Returns
+    -------
+    Xs : list
+        list of X arrays
+    ys : list
+        list of y arrays
     """
+    n_trials = [len(y) for y in ys]
+    
+    # min number of trials
+    min_trials = min(n_trials)
 
-    # total number of trials
-    n_trials = len(y)
+    # make sure all sessions have the same number of trials
+    for i,(X, y) in enumerate(zip(Xs, ys)):
+        Xs[i], ys[i] = equal_trials(X, y, min_trials)
 
-    # number of trials to remove per condition
-    n_remove = (n_trials - n)//2
+    return Xs, ys
 
-    # getting indices of trials to remove
-    idx_0 = np.random.choice(np.where(y==0)[0], n_remove, replace=False)
-    idx_1 = np.random.choice(np.where(y==1)[0], n_remove, replace=False)
-
-    # combining indices
-    idx = np.concatenate((idx_0, idx_1))
-
-    # removing trials
-    X = np.delete(X, idx, axis=1)
-    y = np.delete(y, idx)
-
-    return X, y
-
-
-if __name__ == '__main__':
-
-    """ -------- PARSE ARGUMENTS -------- """
-
+def main():
     args = parse_args()
-
-    classification = True
-    model_type = args.model_type
-    get_tgm = True
     parc = args.parc
-    n_jobs = args.n_jobs
     ncv = args.ncv
-    alpha = args.alpha
 
-    output_path = os.path.join('accuracies', f'cross_decoding_10_{model_type}_{parc}.npy')
-
+    # defining paths
+    path = Path(__file__)
+    output_path = path / "accuracies" / f'cross_decoding_{ncv}_{args.model_type}_{parc}.npy'
+    data_path = path.parents[5] / 'final_data' / 'laurap' / 'source_space' / 'parcelled' / parc
+    event_path = path.parents[2] / 'info_files' / 'events'
 
     # define logger
     logger = logging.getLogger(__name__)
 
     # log info
     logger.info(f'Running cross decoding with the following parameters...')
-    logger.info(f'Classification: {classification}')
-    logger.info(f'Number of cross validation folds: 10')
+    logger.info(f'Number of cross validation folds: {ncv}')
     logger.info(f'Parcellation: {parc}')
 
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
 
     triggers = get_triggers_equal() # get triggers for equal number of trials per condition (27 animate and 27 inanimate)
-
-    path = os.path.join(os.path.sep, 'media', '8.1', 'final_data', 'laurap', 'source_space', 'parcelled', parc)
-    event_path = os.path.join('..', '..', 'info_files', 'events')
     
     # reading and concatenating data
-    Xs, ys = prep_data(sessions, triggers, parc, path, event_path)
+    Xs, ys = prep_data(sessions, triggers, parc, data_path, event_path)
     
     # sign flipping for concatenated data (source space only)
     if parc != 'sens': 
         Xs = [flip_sign(Xs[0], X) for X in Xs]
 
-    n_trials = [X.shape[1] for X in Xs]
-    
-    # max number of trials
-    min_trials = min(n_trials)
-
-    # make sure all sessions have the same number of trials
-    for i,(X, y) in enumerate(zip(Xs, ys)):
-        X, y = equal_trials(X, y, min_trials)
-        Xs[i] = X
-        ys[i] = y
+    # equalising number of trials
+    Xs, ys = equalise_trials(Xs, ys)
 
     # preparing decoding inputs for multiprocessing
-    decoding_inputs = [(train_sesh, test_sesh, idx*i+i, ncv, alpha) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
+    decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
 
     # empty array to store accuracies in
     accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0]), dtype=float)
 
-    with mp.Pool(n_jobs) as p:
-        for train_session, test_session, accuracy in p.map(get_accuracy, decoding_inputs):
+    # preparing the decoder
+    decoder = Decoder(classification=True, ncv = ncv, alpha = args.alpha, model_type = args.model_type, get_tgm=True)
+
+    # using partial to pass arguments to function that are not changing
+    multi_parse = partial(get_accuracy, Xs, ys, decoder)
+
+    with mp.Pool(args.n_jobs) as p:
+        for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
             accuracies[train_session, test_session, :, :] = accuracy
     
     p.close()
     p.join()
 
-    # saving accuracies to file
-    if not os.path.exists('accuracies'):
-        os.mkdir('accuracies')
-
+    # making sure output path exists
+    if not output_path.parent.exists():
+        output_path.parent.mkdir(parents=True)
+   
+    # saving accuracies
     np.save(output_path, accuracies)
     
+
+if __name__ == '__main__':
+    main()
