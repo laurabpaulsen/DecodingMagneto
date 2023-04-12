@@ -19,7 +19,6 @@ from tqdm import tqdm
 import argparse
 import multiprocessing as mp
 
-
 # set parameters for all plots
 plt.rcParams['font.family'] = 'times new roman'
 plt.rcParams['image.cmap'] = 'RdBu_r'
@@ -68,7 +67,7 @@ def prep_X_permute(array):
 
     return X
 
-def statistic(a, b):
+def statistic(a, b, axis=0):
     """
     Calculates the statistic for the permutation test.
 
@@ -78,13 +77,15 @@ def statistic(a, b):
         Array containing the accuracies of the first group.
     b : numpy.ndarray
         Array containing the accuracies of the second group.
+    axis : int
+        Axis along which the mean is calculated. Default is 0.
 
     Returns
     -------
     statistic : float
         The statistic for the permutation test.
     """
-    return np.mean(a) - np.mean(b)
+    return np.mean(a, axis=axis) - np.mean(b, axis=axis)
 
 def tgm_permutation(acc1, acc2, statistic, n = 10):
     """
@@ -107,10 +108,7 @@ def tgm_permutation(acc1, acc2, statistic, n = 10):
     # empty array to store the p-values
     p_values = np.zeros((n_time_points, n_time_points))
 
-    # empty array to store the difference between the statistic and the permuted statistic
-    diff_stats = p_values.copy()
-
-    pool = mp.Pool(4)
+    pool = mp.Pool(3)
 
     for i in tqdm(range(n_time_points)): # loop over training time points
         i_ind = get_indices(i, n)
@@ -119,10 +117,9 @@ def tgm_permutation(acc1, acc2, statistic, n = 10):
         results = pool.starmap(permutation, [(acc1[:, :, i_ind, get_indices(j, n)], acc2[:, :, i_ind, get_indices(j, n)], statistic) for j in range(n_time_points)])
 
         for j, result in enumerate(results):
-            p_values[i, j] = result[0]
-            diff_stats[i, j] = result[1]
+            p_values[i, j] = result
 
-    return p_values, diff_stats
+    return p_values
 
 
 def get_indices(i, n):
@@ -148,33 +145,26 @@ def permutation(acc1, acc2, statistic):
     -------
     p_value : float
         The p-value for the permutation test.
-    
-    diff_statistic : float
-        The difference between the true statistic and the permuted statistic.
     """   
     acc1_tmp = prep_X_permute(acc1)
     acc2_tmp = prep_X_permute(acc2)
 
-    unpermuted = statistic(acc1_tmp, acc2_tmp)
-
     # permutation test
     result = sp.stats.permutation_test((acc1_tmp, acc2_tmp), statistic=statistic)
 
-    #print(f"Unpermuted: {unpermuted}, permuted: {result.statistic}", 'diff:', unpermuted - result.statistic)
-    diff_statistic = abs(unpermuted) - abs(result.statistic)
-    p_value = result.pvalue
-
-    return p_value, diff_statistic
+    return result.pvalue
 
 def plot_values(array, save_path=None):
     fig, ax = plt.subplots(figsize=(8, 8))
-    im = ax.imshow(array, cmap='Reds', origin='lower', interpolation = None)
+    im = ax.imshow(array, cmap='Reds_r', origin='lower', vmin=0, vmax=0.20)
+    # contour showing the significance
+    ax.contour(array, levels=[0.05], colors='k', linewidths=1, origin='lower')
 
     ax.set_xlabel('Testing time')
     ax.set_ylabel('Training time')
-    fig.suptitle('Permutation test (vis_vis and mem_mem)', fontsize=20)
+    fig.suptitle('Permutation test', fontsize=20)
     cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.ax.set_ylabel('Difference in true mean accuracy minus the difference in permuted accuracy', rotation=-90, va="bottom")
+    cbar.ax.set_ylabel('P-value', rotation=-90, va="bottom")
 
     plt.tight_layout()
 
@@ -187,28 +177,22 @@ def main():
     acc = load_acc(args.parcellation)
 
     # all trained on memory, tested on memory
-    mem_mem = acc[7:, 7:]
+    mem_mem = acc[7:, :, :, :][:, 7:, :, :]
 
     # all trained on vis and tested on vis
-    vis_vis = acc[:7, :7]
+    vis_vis = acc[:7, :, :, :][:, :7, :, :]
 
     # how many timepoints to combine during the permutation test (e.g. n = 5 means that 5 timepoints are combined into one)
-    n_time = 5
+    n_time = 1
 
-    p_values, diff_stats = tgm_permutation(mem_mem, vis_vis, statistic, n=n_time)
+    p_values = tgm_permutation(mem_mem, vis_vis, statistic, n=n_time)
 
     # save the p-values and difference in statistics
-    np.save(os.path.join('permutation_results', f"p_values_{args.parcellation}.npy"), p_values)
-    np.save(os.path.join('permutation_results', f"diff_stats_{args.parcellation}.npy"), diff_stats)
-
-    # plot the difference in statistics
-    plot_values(diff_stats, save_path = os.path.join('permutation_results', f"diff_stats_{args.parcellation}.png"))
-
+    np.save(os.path.join('permutation_results', f"{args.parcellation}_p_values_vv_mm.npy"), p_values)
+    
     # plot the p-values
-    plot_values(p_values, save_path = os.path.join('permutation_results', f"p_values_{args.parcellation}.png"))
+    plot_values(p_values, save_path = os.path.join('permutation_results', f"{args.parcellation}_p_values_vv_mm.png"))
 
 
 if __name__ == '__main__':
     main()
-
-
