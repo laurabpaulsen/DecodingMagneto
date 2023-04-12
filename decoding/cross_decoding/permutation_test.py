@@ -62,13 +62,11 @@ def load_acc(parcellation):
     
     return acc
 
-def prep_X_y_permute(array, label):
+def prep_X_permute(array):
     X = array.flatten()
     X = X[~np.isnan(X)]
 
-    y = np.array([label]*len(X))
-
-    return X, y
+    return X
 
 def statistic(a, b):
     """
@@ -112,7 +110,7 @@ def tgm_permutation(acc1, acc2, statistic, n = 10):
     # empty array to store the difference between the statistic and the permuted statistic
     diff_stats = p_values.copy()
 
-    pool = mp.Pool(mp.cpu_count()-4)
+    pool = mp.Pool(4)
 
     for i in tqdm(range(n_time_points)): # loop over training time points
         i_ind = get_indices(i, n)
@@ -129,7 +127,6 @@ def tgm_permutation(acc1, acc2, statistic, n = 10):
 
 def get_indices(i, n):
     i_ind = [n*i+add for add in range(n)]
-
 
     return i_ind
 
@@ -155,19 +152,16 @@ def permutation(acc1, acc2, statistic):
     diff_statistic : float
         The difference between the true statistic and the permuted statistic.
     """   
-    acc1_tmp, acc1_y = prep_X_y_permute(acc1, 0)
-    acc2_tmp, acc2_y = prep_X_y_permute(acc2, 1)
+    acc1_tmp = prep_X_permute(acc1)
+    acc2_tmp = prep_X_permute(acc2)
 
     unpermuted = statistic(acc1_tmp, acc2_tmp)
 
-    # concatenate the accuracies and labels
-    X = np.concatenate((acc1_tmp, acc2_tmp))
-    y = np.concatenate((acc1_y, acc2_y))
-
     # permutation test
-    result = sp.stats.permutation_test((X, y), statistic=statistic)
+    result = sp.stats.permutation_test((acc1_tmp, acc2_tmp), statistic=statistic)
 
-    diff_statistic = unpermuted - result.statistic
+    #print(f"Unpermuted: {unpermuted}, permuted: {result.statistic}", 'diff:', unpermuted - result.statistic)
+    diff_statistic = abs(unpermuted) - abs(result.statistic)
     p_value = result.pvalue
 
     return p_value, diff_statistic
