@@ -5,7 +5,6 @@ This script is used to decode both source and sensor space data using cross deco
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 import numpy as np
-import os
 import multiprocessing as mp
 from time import perf_counter
 import argparse
