@@ -36,6 +36,10 @@ def parse_args():
     ap = argparse.ArgumentParser()
 
     ap.add_argument('-p', '--parcellation', type=str, help='Parcellation to use.', default="HCPMMP1")
+    ap.add_argument('--train1', type=str, help='Training condition of the first group.', default="mem")
+    ap.add_argument('--test1', type=str, help='Testing condition of the first group.', default="mem")
+    ap.add_argument('--train2', type=str, help='Training condition of the second group.', default="vis")
+    ap.add_argument('--test2', type=str, help='Testing condition of the second group.', default="vis")
 
     return ap.parse_args()
 
@@ -176,22 +180,28 @@ def main():
     args = parse_args()
     acc = load_acc(args.parcellation)
 
-    # all trained on memory, tested on memory
-    mem_mem = acc[7:, :, :, :][:, 7:, :, :]
+    vis = np.array([0, 1, 2, 3, 4, 5, 6])
+    mem = np.array([7, 8, 9, 10])
 
-    # all trained on vis and tested on vis
-    vis_vis = acc[:7, :, :, :][:, :7, :, :]
+    train_1 = vis if args.train1 == "vis" else mem
+    test_1 = vis if args.test1 == "vis" else mem
+    train_2 = vis if args.train2 == "vis" else mem
+    test_2 = vis if args.test2 == "vis" else mem
+
+    acc1 = acc[train_1, :, :, :][:, test_1, :, :]
+    acc2 = acc[train_2, :, :, :][:, test_2, :, :]
 
     # how many timepoints to combine during the permutation test (e.g. n = 5 means that 5 timepoints are combined into one)
     n_time = 1
 
-    p_values = tgm_permutation(mem_mem, vis_vis, statistic, n=n_time)
+    p_values = tgm_permutation(acc1, acc2, statistic, n=n_time)
 
     # save the p-values and difference in statistics
-    np.save(os.path.join('permutation_results', f"{args.parcellation}_p_values_vv_mm.npy"), p_values)
+    np.save(os.path.join('permutation_results', f"{args.parcellation}_p_values_{args.train1}{args.test1}_{args.train2}{args.test2}.npy"), p_values)
     
     # plot the p-values
-    plot_values(p_values, save_path = os.path.join('permutation_results', f"{args.parcellation}_p_values_vv_mm.png"))
+    plot_values(p_values, save_path = os.path.join("permutation_results", f"{args.parcellation}_p_values_{args.train1}{args.test1}_{args.train2}{args.test2}.png"))
+
 
 
 if __name__ == '__main__':
