@@ -155,9 +155,9 @@ def main():
 
     # get accuracies
     accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
-        
+
     # save accuracies
-    out_path = path / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}.npy"
+    out_path = path.parent / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}.npy"
         
     # ensure accuracy directory exists
     if not out_path.parent.exists():
