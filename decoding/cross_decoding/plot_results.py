@@ -60,7 +60,7 @@ def change_spine_colour(ax, colour):
     ax.title.set_color(colour)
 
 
-def plot_cross_decoding_matrix(acc, parc):
+def plot_cross_decoding_matrix(acc, parc, save_path = None):
     fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (30, 30))
     
     for i in range(acc.shape[0]):
@@ -69,7 +69,8 @@ def plot_cross_decoding_matrix(acc, parc):
             axs[i, j].set_title(f'train:{i+1}, test:{j+1}')
     
     plt.tight_layout()
-    plt.savefig(os.path.join('plots', f'cross_decoding_{parc}.png'))
+    if save_path: 
+        plt.savefig(save_path)
     plt.close()
 
 
