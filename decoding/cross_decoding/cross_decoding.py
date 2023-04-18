@@ -5,7 +5,6 @@ This script is used to decode both source and sensor space data using cross deco
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 import numpy as np
-import os
 import multiprocessing as mp
 from time import perf_counter
 import argparse
@@ -18,7 +17,8 @@ import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
 from utils.data.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
-from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights, equal_trials
+from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights
+from utils.data.prep_data import equalise_trials
 from utils.analysis.decoder import Decoder
 
 
@@ -96,34 +96,6 @@ def get_accuracy(Xs:list, ys:list, decoder:Decoder, input:tuple):
 
     return ind_train, ind_test, accuracy
 
-def equalise_trials(Xs:list, ys:list):
-    """
-    This function is used to equalise the number of trials across a list of X and y arrays.
-
-    Parameters
-    ----------
-    Xs : list
-        list of X arrays
-    ys : list
-        list of y arrays
-    
-    Returns
-    -------
-    Xs : list
-        list of X arrays
-    ys : list
-        list of y arrays
-    """
-    n_trials = [len(y) for y in ys]
-    
-    # min number of trials
-    min_trials = min(n_trials)
-
-    # make sure all sessions have the same number of trials
-    for i,(X, y) in enumerate(zip(Xs, ys)):
-        Xs[i], ys[i] = equal_trials(X, y, min_trials)
-
-    return Xs, ys
 
 def main():
     args = parse_args()

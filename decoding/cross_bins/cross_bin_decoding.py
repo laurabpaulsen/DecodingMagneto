@@ -17,12 +17,16 @@ from pathlib import Path
 # local imports
 import sys
 import pathlib
+sys.path.append(str(pathlib.Path(__file__).parents[1]))
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
 from utils.data.concatenate import read_and_concate_sessions
 from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights
+from utils.data.prep_data import equalise_trials
+
 from utils.analysis.decoder import Decoder
-from cross_decoding import get_accuracy, equalise_trials
+from cross_decoding.cross_decoding import get_accuracy
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')
@@ -72,16 +76,9 @@ def prep_data_split(session_list:list, triggers:list, n_splits:int=11):
     for i, (X, y) in enumerate(zip(Xs, ys)):
         Xs[i], ys[i], _ = balance_class_weights(X, y)
 
-        # save the minumum number of trials
-        if i == 0:
-            min_trials = Xs[i].shape[1]
-        else:
-            if Xs[i].shape[1] < min_trials:
-                min_trials = Xs[i].shape[1]
-
     # equalize number of trials in each split to the minimum number of trials
     Xs, ys = equalise_trials(Xs, ys)
-    
+
     return Xs, ys
 
 def get_accuracy_session(Xs:list, ys:list, decoder:Decoder, n_jobs:int=1):
@@ -150,14 +147,17 @@ def main():
     # Make sure all splits have the same number of trials
     Xs, ys = equalise_trials(Xs, ys)
 
+    for y in ys:
+        print(y.shape)
+
     # preparing the decoder
     decoder = Decoder(classification=True, ncv=args.ncv, alpha=args.alpha, model_type=args.model_type, get_tgm = True, verbose=False)
 
     # get accuracies
     accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
-        
+
     # save accuracies
-    out_path = path / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}.npy"
+    out_path = path.parent / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}.npy"
         
     # ensure accuracy directory exists
     if not out_path.parent.exists():

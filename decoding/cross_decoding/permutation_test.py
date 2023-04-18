@@ -19,7 +19,6 @@ from tqdm import tqdm
 import argparse
 import multiprocessing as mp
 
-
 # set parameters for all plots
 plt.rcParams['font.family'] = 'times new roman'
 plt.rcParams['image.cmap'] = 'RdBu_r'
@@ -37,6 +36,10 @@ def parse_args():
     ap = argparse.ArgumentParser()
 
     ap.add_argument('-p', '--parcellation', type=str, help='Parcellation to use.', default="HCPMMP1")
+    ap.add_argument('--train1', type=str, help='Training condition of the first group.', default="mem")
+    ap.add_argument('--test1', type=str, help='Testing condition of the first group.', default="mem")
+    ap.add_argument('--train2', type=str, help='Training condition of the second group.', default="vis")
+    ap.add_argument('--test2', type=str, help='Testing condition of the second group.', default="vis")
 
     return ap.parse_args()
 
@@ -62,15 +65,13 @@ def load_acc(parcellation):
     
     return acc
 
-def prep_X_y_permute(array, label):
+def prep_X_permute(array):
     X = array.flatten()
     X = X[~np.isnan(X)]
 
-    y = np.array([label]*len(X))
+    return X
 
-    return X, y
-
-def statistic(a, b):
+def statistic(a, b, axis=0):
     """
     Calculates the statistic for the permutation test.
 
@@ -80,13 +81,15 @@ def statistic(a, b):
         Array containing the accuracies of the first group.
     b : numpy.ndarray
         Array containing the accuracies of the second group.
+    axis : int
+        Axis along which the mean is calculated. Default is 0.
 
     Returns
     -------
     statistic : float
         The statistic for the permutation test.
     """
-    return np.mean(a) - np.mean(b)
+    return np.mean(a, axis=axis) - np.mean(b, axis=axis)
 
 def tgm_permutation(acc1, acc2, statistic, n = 10):
     """
@@ -109,10 +112,7 @@ def tgm_permutation(acc1, acc2, statistic, n = 10):
     # empty array to store the p-values
     p_values = np.zeros((n_time_points, n_time_points))
 
-    # empty array to store the difference between the statistic and the permuted statistic
-    diff_stats = p_values.copy()
-
-    pool = mp.Pool(mp.cpu_count()-4)
+    pool = mp.Pool(3)
 
     for i in tqdm(range(n_time_points)): # loop over training time points
         i_ind = get_indices(i, n)
@@ -121,15 +121,13 @@ def tgm_permutation(acc1, acc2, statistic, n = 10):
         results = pool.starmap(permutation, [(acc1[:, :, i_ind, get_indices(j, n)], acc2[:, :, i_ind, get_indices(j, n)], statistic) for j in range(n_time_points)])
 
         for j, result in enumerate(results):
-            p_values[i, j] = result[0]
-            diff_stats[i, j] = result[1]
+            p_values[i, j] = result
 
-    return p_values, diff_stats
+    return p_values
 
 
 def get_indices(i, n):
     i_ind = [n*i+add for add in range(n)]
-
 
     return i_ind
 
@@ -151,36 +149,26 @@ def permutation(acc1, acc2, statistic):
     -------
     p_value : float
         The p-value for the permutation test.
-    
-    diff_statistic : float
-        The difference between the true statistic and the permuted statistic.
     """   
-    acc1_tmp, acc1_y = prep_X_y_permute(acc1, 0)
-    acc2_tmp, acc2_y = prep_X_y_permute(acc2, 1)
-
-    unpermuted = statistic(acc1_tmp, acc2_tmp)
-
-    # concatenate the accuracies and labels
-    X = np.concatenate((acc1_tmp, acc2_tmp))
-    y = np.concatenate((acc1_y, acc2_y))
+    acc1_tmp = prep_X_permute(acc1)
+    acc2_tmp = prep_X_permute(acc2)
 
     # permutation test
-    result = sp.stats.permutation_test((X, y), statistic=statistic)
+    result = sp.stats.permutation_test((acc1_tmp, acc2_tmp), statistic=statistic)
 
-    diff_statistic = unpermuted - result.statistic
-    p_value = result.pvalue
-
-    return p_value, diff_statistic
+    return result.pvalue
 
 def plot_values(array, save_path=None):
     fig, ax = plt.subplots(figsize=(8, 8))
-    im = ax.imshow(array, cmap='Reds', origin='lower', interpolation = None)
+    im = ax.imshow(array, cmap='Reds_r', origin='lower', vmin=0, vmax=0.20)
+    # contour showing the significance
+    ax.contour(array, levels=[0.05], colors='k', linewidths=1, origin='lower')
 
     ax.set_xlabel('Testing time')
     ax.set_ylabel('Training time')
-    fig.suptitle('Permutation test (vis_vis and mem_mem)', fontsize=20)
+    fig.suptitle('Permutation test', fontsize=20)
     cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.ax.set_ylabel('Difference in true mean accuracy minus the difference in permuted accuracy', rotation=-90, va="bottom")
+    cbar.ax.set_ylabel('P-value', rotation=-90, va="bottom")
 
     plt.tight_layout()
 
@@ -192,29 +180,29 @@ def main():
     args = parse_args()
     acc = load_acc(args.parcellation)
 
-    # all trained on memory, tested on memory
-    mem_mem = acc[7:, 7:]
+    vis = np.array([0, 1, 2, 3, 4, 5, 6])
+    mem = np.array([7, 8, 9, 10])
 
-    # all trained on vis and tested on vis
-    vis_vis = acc[:7, :7]
+    train_1 = vis if args.train1 == "vis" else mem
+    test_1 = vis if args.test1 == "vis" else mem
+    train_2 = vis if args.train2 == "vis" else mem
+    test_2 = vis if args.test2 == "vis" else mem
+
+    acc1 = acc[train_1, :, :, :][:, test_1, :, :]
+    acc2 = acc[train_2, :, :, :][:, test_2, :, :]
 
     # how many timepoints to combine during the permutation test (e.g. n = 5 means that 5 timepoints are combined into one)
-    n_time = 5
+    n_time = 1
 
-    p_values, diff_stats = tgm_permutation(mem_mem, vis_vis, statistic, n=n_time)
+    p_values = tgm_permutation(acc1, acc2, statistic, n=n_time)
 
     # save the p-values and difference in statistics
-    np.save(os.path.join('permutation_results', f"p_values_{args.parcellation}.npy"), p_values)
-    np.save(os.path.join('permutation_results', f"diff_stats_{args.parcellation}.npy"), diff_stats)
-
-    # plot the difference in statistics
-    plot_values(diff_stats, save_path = os.path.join('permutation_results', f"diff_stats_{args.parcellation}.png"))
-
+    np.save(os.path.join('permutation_results', f"{args.parcellation}_p_values_{args.train1}{args.test1}_{args.train2}{args.test2}.npy"), p_values)
+    
     # plot the p-values
-    plot_values(p_values, save_path = os.path.join('permutation_results', f"p_values_{args.parcellation}.png"))
+    plot_values(p_values, save_path = os.path.join("permutation_results", f"{args.parcellation}_p_values_{args.train1}{args.test1}_{args.train2}{args.test2}.png"))
+
 
 
 if __name__ == '__main__':
     main()
-
-
