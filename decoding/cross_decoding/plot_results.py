@@ -35,7 +35,7 @@ def determine_linestyle(train_condition, test_condition):
         return "--"
     
 def determine_colour(i, j):
-    colors = sns.color_palette("Blues_r", 15)
+    colors = sns.color_palette("hls", 12)
 
     return colors[abs(i-j)]
 
@@ -59,8 +59,19 @@ def change_spine_colour(ax, colour):
     # title
     ax.title.set_color(colour)
 
+def x_axis_seconds(ax):
+    """
+    Changes the x axis to seconds
+    """
+    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
 
-def plot_cross_decoding_matrix(acc, parc, save_path = None):
+def y_axis_percent(ax):
+    """
+    Changes the y axis seconds
+    """
+    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+
+def plot_cross_decoding_matrix(acc, save_path = None):
     fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (30, 30))
     
     for i in range(acc.shape[0]):
@@ -197,7 +208,7 @@ def cross_diags_per_sesh(accuracies, save_path = None):
 
     condition = ["vis", "vis", "vis", "vis", "vis", "vis", "vis", "mem", "mem", "mem", "mem"]
     
-    fig, axs = plt.subplots(4, 3, figsize = (30, 25), dpi = 300, sharex = True, sharey = True)
+    fig, axs = plt.subplots(4, 3, figsize = (25, 20), dpi = 300, sharex = True, sharey = True)
 
     order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6]
 
@@ -215,7 +226,7 @@ def cross_diags_per_sesh(accuracies, save_path = None):
                 # determine colour (depending on how far away the train sesh and test sesh are)
                 col = determine_colour(order[i], order[j])
                     
-                ax.plot(diagonals[order[i], order[j]], color = col, alpha = 1, linewidth = 1, linestyle = line_style)
+                ax.plot(diagonals[order[i], order[j]], color = col, alpha = 1, linewidth = 1)
 
         # legend in last ax
         else:
@@ -227,6 +238,8 @@ def cross_diags_per_sesh(accuracies, save_path = None):
                 ax.plot([], [], color = col, alpha = 1,  linewidth = 1, label = f'{j}')
             
             ax.legend(title = 'Distance between training and test session',  ncol=len(condition), loc = 'center', bbox_to_anchor = (0.5, 0.5))
+        
+        x_axis_seconds(ax)
     # add labels
     fig.supylabel('Accuracy (%)')
     fig.supxlabel('Samples')
@@ -235,8 +248,11 @@ def cross_diags_per_sesh(accuracies, save_path = None):
     if save_path:
         plt.savefig(save_path)
 
-def cross_diags_average_sesh(accuracies, save_path = None):
+def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=""):
     diagonals = np.diagonal(accuracies, axis1=2, axis2=3)
+
+    # multiply by 100 to get percentages
+    diagonals = diagonals * 100
 
     # create 11 by 11 matrix with distances between sessions
     # empty matrix
@@ -247,7 +263,8 @@ def cross_diags_average_sesh(accuracies, save_path = None):
     for i in range(11):
         for j in range(11):
             distances[i, j] = abs(order[i]-order[j])
-    fig, ax = plt.subplots(1, 1, figsize = (20, 15), dpi = 300)
+    
+    fig, ax = plt.subplots(1, 1, figsize = (15, 10), dpi = 300)
 
     # loop over all distances
     for dist in range(11):
@@ -260,32 +277,38 @@ def cross_diags_average_sesh(accuracies, save_path = None):
 
             # get the average accuracy for each pair of sessions that are dist away from each other
             tmp = np.array([diagonals[i, j] for i, j in indices])
+            n_pairs = tmp.shape[0]
 
             # standard deviation
-            tmp_std = tmp.std(axis = 0)
+
             tmp_acc = tmp.mean(axis = 0)
 
             colour = determine_colour(12, dist)
             
             # plot tmp acc
-            ax.plot(tmp_acc, label = f'{dist} sessions apart', linewidth = 1, color = colour)
+            ax.plot(tmp_acc, label = f'{dist} ({n_pairs} pairs)', linewidth = 1, color = colour)
+            
+            if SE: 
+                # standard deviation
+                tmp_std = tmp.std(axis = 0)
+                
+                # standard error
+                tmp_std = tmp_std / np.sqrt(tmp.shape[0])
 
-            # standard error
-            tmp_std = tmp_std / np.sqrt(tmp.shape[0])
-
-            # plot standard error
-            ax.fill_between(np.arange(0, 250), (tmp_acc - tmp_std), (tmp_acc + tmp_std), alpha = 0.1, color =colour)
+                # plot standard error
+                ax.fill_between(np.arange(0, 250), (tmp_acc - tmp_std), (tmp_acc + tmp_std), alpha = 0.1, color =colour)
             
             # plot legend
-            ax.legend(loc = 'upper right')
+            ax.legend(loc = 'upper right', title = "Distance")
+            
+            # set x axis to seconds
+            x_axis_seconds(ax)
 
 
     # add title and labels
-    fig.suptitle('Average cross-decoding accuracies for different "distances" between training and test session', fontsize = 25)
-    ax.set_title("Note: the longer the distance the fewer pairs there are (e.g., 2 pairs for dist 10, 4 pairs for dist 9 ... 20 pairs for dist 1) \n that is, there is more uncertainty in the average accuracy for longer distances", fontsize = 20)
-
+    fig.suptitle(title, fontsize = 25)
     fig.supylabel('Accuracy (%)')
-    fig.supxlabel('Samples')
+    fig.supxlabel('Time (s)')
     
     plt.tight_layout()
 
@@ -296,17 +319,17 @@ def main_plot_generator():
     accuracies_cross = {} # not including testing and training on the same session
     accuracies = {} # including testing and training on the same session
 
-    for parc in ['aparc','aparc.DKTatlas', 'aparc.a2009s', 'sens', 'HCPMMP1']:
+    for parc in ["sens", "HCPMMP1"]: #['aparc','aparc.DKTatlas', 'aparc.a2009s', 'sens', 'HCPMMP1']:
         # read in results
         accuracies[parc] = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
 
         # plot all pairs of sessions in one figure
-        plot_cross_decoding_matrix(accuracies[parc], parc)
+        plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
 
         # plot diagonals per session
         cross_diags_per_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals.png'))
         # average over all sessions
-        cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'))
+        cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'), title = 'Average cross-decoding accuracies given distance between sessions')
 
         # set within session accuracies to nan
         acc1 = accuracies[parc].copy()
@@ -315,7 +338,7 @@ def main_plot_generator():
         accuracies_cross[parc] = acc1
 
         # plot average over all conditions and all cross-session pairs
-        plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=42.5, vmax=57.5, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
+        plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
         plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
         
         # plot averaged according to conditions and using cross-session pairs
