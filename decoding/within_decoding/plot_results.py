@@ -16,7 +16,7 @@ def main():
     acc = np.load(path / "accuracies" / "LDA_auto_10.npy")
 
     # plot all pairs of sessions in one figure
-   # plot_cross_decoding_matrix(acc, "sens", save_path = path / "plots" / "entire_matrix.png")
+    plot_cross_decoding_matrix(acc, "sens", save_path = path / "plots" / "entire_matrix.png")
 
     # plot diagonals per session
     cross_diags_per_sesh(acc, save_path = path / "plots" / "sens_diagonals.png")
