@@ -11,13 +11,12 @@ dev notes:
 import sys
 import pathlib
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
+from utils.analysis.permute import tgm_permutation
+
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import scipy as sp
-from tqdm import tqdm
 import argparse
-import multiprocessing as mp
 
 # set parameters for all plots
 plt.rcParams['font.family'] = 'times new roman'
@@ -43,7 +42,6 @@ def parse_args():
 
     return ap.parse_args()
 
-
 def load_acc(parcellation):
     """
     Loads the accuracies from a file and sets the accuracies of the training and testing on the same session to nan.
@@ -65,12 +63,6 @@ def load_acc(parcellation):
     
     return acc
 
-def prep_X_permute(array):
-    X = array.flatten()
-    X = X[~np.isnan(X)]
-
-    return X
-
 def statistic(a, b, axis=0):
     """
     Calculates the statistic for the permutation test.
@@ -90,73 +82,6 @@ def statistic(a, b, axis=0):
         The statistic for the permutation test.
     """
     return np.mean(a, axis=axis) - np.mean(b, axis=axis)
-
-def tgm_permutation(acc1, acc2, statistic, n = 10):
-    """
-    Performs a permutation test on the temporal generalisation matrices with the cross decoding results.
-
-    Returns
-    -------
-    p_values : numpy.ndarray
-        Array containing the p-values for each region.
-    
-    diff_statistic : numpy.ndarray
-        Array containing the difference between the true statistic and the permuted statistic.
-    """
-
-    # check that the temporal generalisation matrices have the same shape
-    assert acc1[0, 0].shape == acc2[0, 0].shape, "The temporal generalisation matrices have different shapes."
-
-    n_time_points = 250//n
-
-    # empty array to store the p-values
-    p_values = np.zeros((n_time_points, n_time_points))
-
-    pool = mp.Pool(3)
-
-    for i in tqdm(range(n_time_points)): # loop over training time points
-        i_ind = get_indices(i, n)
-
-        # loop over testing time points in parallel
-        results = pool.starmap(permutation, [(acc1[:, :, i_ind, get_indices(j, n)], acc2[:, :, i_ind, get_indices(j, n)], statistic) for j in range(n_time_points)])
-
-        for j, result in enumerate(results):
-            p_values[i, j] = result
-
-    return p_values
-
-
-def get_indices(i, n):
-    i_ind = [n*i+add for add in range(n)]
-
-    return i_ind
-
-
-def permutation(acc1, acc2, statistic):
-    """
-    Performs a permutation test on two arrays.
-
-    Parameters
-    ----------
-    acc1 : numpy.ndarray
-        Array containing the accuracies of the first group.
-    acc2 : numpy.ndarray
-        Array containing the accuracies of the second group.
-    statistic : function
-        Function that calculates the statistic for the permutation test.
-    
-    Returns
-    -------
-    p_value : float
-        The p-value for the permutation test.
-    """   
-    acc1_tmp = prep_X_permute(acc1)
-    acc2_tmp = prep_X_permute(acc2)
-
-    # permutation test
-    result = sp.stats.permutation_test((acc1_tmp, acc2_tmp), statistic=statistic, n_resamples=1000)
-
-    return result.pvalue
 
 def plot_values(array, save_path=None):
     fig, ax = plt.subplots(figsize=(8, 8))
@@ -191,17 +116,13 @@ def main():
     acc1 = acc[train_1, :, :, :][:, test_1, :, :]
     acc2 = acc[train_2, :, :, :][:, test_2, :, :]
 
-    # how many timepoints to combine during the permutation test (e.g. n = 5 means that 5 timepoints are combined into one)
-    n_time = 1
-
-    p_values = tgm_permutation(acc1, acc2, statistic, n=n_time)
+    p_values = tgm_permutation(acc1, acc2, statistic, n_jobs=4)
 
     # save the p-values and difference in statistics
     np.save(os.path.join('permutation_results', f"{args.parcellation}_p_values_{args.train1}{args.test1}_{args.train2}{args.test2}.npy"), p_values)
     
     # plot the p-values
     plot_values(p_values, save_path = os.path.join("permutation_results", f"{args.parcellation}_p_values_{args.train1}{args.test1}_{args.train2}{args.test2}.png"))
-
 
 
 if __name__ == '__main__':
