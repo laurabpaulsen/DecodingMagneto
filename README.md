@@ -21,19 +21,20 @@ setup.sh
 ## Project Organization
 ```
 ├── decoding
+│   ├── condition                       <- Decoding between conditions (memory vs. no memory)
+│   ├── cross_bins                      <- Decoding across bins
 │   ├── cross_decoding                  <- Decoding across sessions
 │   │    ├── accuracies                
 │   │    │   ├── cross_decoding_10_LDA_aparc.npy       
 │   │    │   └── ...
 │   │    ├── plots                      
 │   │    └── cross_decoding.py          
-│   ├── condition                       <- Decoding between conditions (memory vs. no memory)
 │   └── ica                             <- Decoding each session with and without ICA components removed
 ├── info_files                           
 ├── preprocessing        
 ├── utils                               <- Local modules
 │   ├── __init__.py
-│   ├── data                            <- Functions for loading and preprocessing the data
+│   ├── data                            <- Functions for loading and preparing the data for decoding
 │   └── analysis                        <- Functions for decoding, plotting, etc
 └── README.md                           <- The top-level README for this project.  
 ```
