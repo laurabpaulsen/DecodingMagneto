@@ -16,14 +16,16 @@ plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
 def plot_values(array, save_path=None, alpha=[0.05]):
-    fig, ax = plt.subplots(figsize=(8, 8))
+    fig, ax = plt.subplots(figsize=(5, 5), dpi=300)
 
     # set values above the significance level to nan
     array[array > alpha[0]] = np.nan
-    im = ax.imshow(array, cmap='Reds_r', origin='lower', vmin=0, vmax=0.06, interpolation='bilinear')
+    im = ax.imshow(array, cmap='Reds_r', origin='lower', vmin=0, vmax=alpha[0]+0.001, interpolation='bilinear')
 
-    ax.set_xlabel('Testing time')
-    ax.set_ylabel('Training time')
+    ax.set_xlabel('Testing time (s)')
+    ax.set_ylabel('Training time (s)')
+    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
     fig.suptitle('Permutation test', fontsize=20)
     cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     cbar.ax.set_ylabel('P-value', rotation=-90, va="bottom")
