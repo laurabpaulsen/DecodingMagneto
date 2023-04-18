@@ -16,13 +16,13 @@ def main():
     acc = np.load(path / "accuracies" / "LDA_auto_10.npy")
 
     # plot all pairs of sessions in one figure
-    plot_cross_decoding_matrix(acc, "sens", save_path = path / "plots" / "entire_matrix.png")
+    plot_cross_decoding_matrix(acc, save_path = path / "plots" / "entire_matrix.png")
 
     # plot diagonals per session
     cross_diags_per_sesh(acc, save_path = path / "plots" / "sens_diagonals.png")
     
     # average over all sessions
-    cross_diags_average_sesh(acc, save_path = path / "plots" / "sens_average_diagonals.png")
+    cross_diags_average_sesh(acc, save_path = path / "plots" / "sens_average_diagonals.png", title="Average decoding accuracy given distances between bins")
 
     # set within session accuracies to nan
     acc1 = acc.copy()
@@ -30,7 +30,7 @@ def main():
 
 
     # plot average over all conditions and all cross-session pairs
-    plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=42.5, vmax=57.5, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
+    plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
     plt.savefig(path / "plots" / "sens_average.png")
 
 if __name__ in "__main__":
