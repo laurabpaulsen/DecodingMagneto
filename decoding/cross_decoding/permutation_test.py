@@ -35,7 +35,7 @@ plt.rcParams['figure.dpi'] = 300
 def parse_args():
     ap = argparse.ArgumentParser()
 
-    ap.add_argument('-p', '--parcellation', type=str, help='Parcellation to use.', default="HCPMMP1")
+    ap.add_argument('-p', '--parcellation', type=str, help='Parcellation to use.', default="sens")
     ap.add_argument('--train1', type=str, help='Training condition of the first group.', default="mem")
     ap.add_argument('--test1', type=str, help='Testing condition of the first group.', default="mem")
     ap.add_argument('--train2', type=str, help='Training condition of the second group.', default="vis")
@@ -154,7 +154,7 @@ def permutation(acc1, acc2, statistic):
     acc2_tmp = prep_X_permute(acc2)
 
     # permutation test
-    result = sp.stats.permutation_test((acc1_tmp, acc2_tmp), statistic=statistic)
+    result = sp.stats.permutation_test((acc1_tmp, acc2_tmp), statistic=statistic, n_resamples=1000)
 
     return result.pvalue
 

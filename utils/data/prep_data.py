@@ -1,6 +1,6 @@
 import numpy as np
 
-def n_trials(X, y, n: int):
+def n_trials(X, y, n: int, axis: int=1):
     """
     Removes trials from X and y, such that the number of trials is equal to n. It is assumed that classes are already balanced. Therefore an equal number of trials is removed from each class.
 
@@ -12,6 +12,8 @@ def n_trials(X, y, n: int):
         labels (0 or 1)
     n : int
         number of trials to keep
+    axis : int, optional
+        axis along which to remove trials from X array, by default 1
     
     Returns:
     -------
@@ -35,7 +37,7 @@ def n_trials(X, y, n: int):
     idx = np.concatenate((idx_0, idx_1))
 
     # removing trials
-    X = np.delete(X, idx, axis=1)
+    X = np.delete(X, idx, axis=axis)
     y = np.delete(y, idx)
 
     return X, y
@@ -54,9 +56,9 @@ def equalise_trials(Xs:list, ys:list):
     Returns
     -------
     Xs : list
-        list of X arrays
+        list of X arrays with equal number of trials
     ys : list
-        list of y arrays
+        list of y arrays with equal number of trials
     """
     # min number of trials
     min_trials = min([len(y) for y in ys])
