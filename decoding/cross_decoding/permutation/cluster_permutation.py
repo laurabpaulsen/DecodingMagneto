@@ -91,9 +91,6 @@ def main():
     # dividing accuracies into two groups
     acc1, acc2 = divide_acc(acc, args)
 
-    print(acc1.shape)
-    print(acc2.shape)
-
     # reshaping accuracies
     # merge two first dimensions ignoring nan values
     acc1 = acc1.reshape(acc1.shape[0] * acc1.shape[1], acc1.shape[2], acc1.shape[3])
@@ -102,11 +99,6 @@ def main():
     # remove nan values
     acc1 = acc1[~np.isnan(acc1).any(axis=(1, 2))]
     acc2 = acc2[~np.isnan(acc2).any(axis=(1, 2))]
-
-    print(acc1.shape)
-    print(acc2.shape)
-
-
 
     # cluster-based permutation test
     T_obs, clusters, cluster_p_values, H0 = permutation_cluster_test([acc1, acc2], n_permutations=1000, threshold=0.01, tail=0, stat_fun=statistic, n_jobs=1, verbose=True)
@@ -124,10 +116,6 @@ def main():
         # save array
         np.save(path / "permutation" / f"{args.parcellation}_sig_clusters_{args.train1}{args.test1}_{args.train2}{args.test2}.npy", significant_clusters)
         
-        # plot image
-        p = plt.imshow(significant_clusters, cmap="gray_r", origin="lower", interpolation="none")
-        plt.colorbar(p)
-        plt.savefig(path / "permutation" / f"{args.parcellation}_sig_clusters_{args.train1}{args.test1}_{args.train2}{args.test2}.png")
 
 if __name__ == "__main__":
     main()
