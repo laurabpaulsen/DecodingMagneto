@@ -85,6 +85,15 @@ def plot_cross_decoding_matrix(acc, save_path = None):
     plt.close()
 
 
+
+def plot_sig_clusters(ax, array_name):
+    # add significant clusters to plot as contour
+    cluster_array = np.load(f'permutation/sens_sig_clusters_{array_name}.npy', allow_pickle=True)
+    # plot contour where value is 1
+    ax.contour(cluster_array, levels = [0.5], colors = "k", linewidths = 0.3, alpha = 0.7)
+
+
+
 def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
     fig, axs = plt.subplots(4, 3, figsize = (15, 15), dpi = 300)
     
@@ -97,58 +106,70 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
     vmin_diff = -5
     vmax_diff = 5
     
-    # train and test on same condition
+    # VIS VIS
     vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
     axs[1, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5))
     axs[1, 0].set_title('train: vis,  test:vis')
 
+    # MEM MEM
     mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
-
     axs[1, 1] = plot.plot_tgm_ax(mem_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5))
     axs[1, 1].set_title('train:mem, test:mem')
 
-    # difference between test and train condition (vis - mem)
-    axs[1, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
-    
-    axs[1, 2].set_title('vis_vis - mem_mem')
-
-    # train on vis, test on mem
+    # VIS MEM
     vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
-
     axs[2, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5))
     axs[2, 0].set_title('train:vis, test:mem')
 
-    # train on mem, test on vis
+    # MEM VIS
     mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
     axs[2, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5))
     axs[2, 1].set_title('train:mem, test:vis')
 
+    ### DIFFERENCE PLOTS ###
+    # difference between test and train condition (vis - mem)
+    axs[1, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
+    tmp_title = 'visvis_memmem'
+    axs[1, 2].set_title(tmp_title)
+    plot_sig_clusters(axs[1, 2], tmp_title)
+
     # difference between test and train condition
     axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff)
-    axs[2, 2].set_title('vis_mem - mem_vis')
+    tmp_title = 'vismem_memvis'
+    axs[2, 2].set_title(tmp_title)
+    plot_sig_clusters(axs[2, 2], tmp_title)
 
     # difference between vis_vis and vis_mem
     axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff)
-    axs[3, 0].set_title('vis_vis - vis_mem')
+    tmp_title = 'visvis_vismem'
+    axs[3, 0].set_title(tmp_title)
+    plot_sig_clusters(axs[3, 0], tmp_title)
     
+
     # difference between mem_mem and mem_vis
     axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff)
-    axs[3, 1].set_title('mem_mem - mem_vis')
+    tmp_title = 'memmem_memvis'
+    axs[3, 1].set_title(tmp_title)
+    plot_sig_clusters(axs[3, 1], tmp_title)
 
     # difference between vis_vis and mem_vis
     axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff)
-    axs[3, 2].set_title('vis_vis - mem_vis')
+    tmp_title = 'visvis_memvis'
+    axs[3, 2].set_title(tmp_title)
+    plot_sig_clusters(axs[3, 2], tmp_title)
 
     # difference between vis_mem and mem_mem
     axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff)
-    axs[0, 2].set_title('vis_mem - mem_mem')
+    tmp_title = 'vismem_memmem'
+    axs[0, 2].set_title(tmp_title)
+    plot_sig_clusters(axs[0, 2], tmp_title)
+
 
     for ax in axs[[2, 3, 3, 3, 1, 3, 0], [2, 2, 0, 1, 2, 2, 2]].flatten(): # difference plots
         change_spine_colour(ax, diff_colour)
         add_diagonal_line(ax)
 
     # plot colourbars in the first two columns of the first row
-
     gs = axs[0, 0].get_gridspec()
 
     # remove the underlying axes
@@ -320,16 +341,17 @@ def main_plot_generator():
     accuracies = {} # including testing and training on the same session
 
     for parc in ["sens", "HCPMMP1"]: #['aparc','aparc.DKTatlas', 'aparc.a2009s', 'sens', 'HCPMMP1']:
+        
         # read in results
         accuracies[parc] = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
 
         # plot all pairs of sessions in one figure
-        plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
+        #plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
 
         # plot diagonals per session
-        cross_diags_per_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals.png'))
+        #cross_diags_per_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals.png'))
         # average over all sessions
-        cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'), title = 'Average cross-decoding accuracies given distance between sessions')
+        #cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'), title = 'Average cross-decoding accuracies given distance between sessions')
 
         # set within session accuracies to nan
         acc1 = accuracies[parc].copy()
@@ -338,9 +360,9 @@ def main_plot_generator():
         accuracies_cross[parc] = acc1
 
         # plot average over all conditions and all cross-session pairs
-        plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
-        plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
-        
+        #plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
+        #plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
+
         # plot averaged according to conditions and using cross-session pairs
         plot_train_test_condition(acc1, parc, diff_colour='red')
 
