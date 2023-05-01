@@ -15,8 +15,6 @@ from scipy.stats import pearsonr
 # dates from pandas
 from pandas import to_datetime
 
-from plot_results import x_axis_seconds
-
 # set parameters for all plots
 plt.rcParams['font.family'] = 'times new roman'
 plt.rcParams['image.cmap'] = 'RdBu_r'
@@ -30,6 +28,12 @@ plt.rcParams['legend.title_fontsize'] = 12
 plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
+
+def x_axis_seconds(ax):
+    """
+    Changes the x axis to seconds
+    """
+    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
 
 def get_distance_matrix(order):
     # number of sessions
@@ -112,7 +116,6 @@ def main():
 
     # convert to datetime
     dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
-
 
     fig, axes = plt.subplots(3, 2, figsize=(10, 10), dpi=300)
 
