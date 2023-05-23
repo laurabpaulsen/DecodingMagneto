@@ -5,7 +5,7 @@ import numpy as np
 colours = ['#0063B2FF', '#5DBB63FF']
 
 # set font for all plots
-plt.rcParams['font.family'] = 'times new roman'
+plt.rcParams['font.family'] = 'Serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -18,7 +18,7 @@ plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
 
-def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = False):
+def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = False, title = None, title_fontsize = 14):
     """
     Plots a time x time generalization matrix on an axis object
 
@@ -54,6 +54,8 @@ def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = F
         cb = plt.colorbar(im, ax = ax, location = 'top', shrink = 0.5)
         cb.set_label(label = 'Accuracy (%)')
 
+    if title:
+        ax.set_title(title, fontsize = title_fontsize)
     
     return ax
 
