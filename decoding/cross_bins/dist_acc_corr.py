@@ -1,7 +1,5 @@
 """
-This script investigates the correlation between the decoding accuracies and the distance between the sessions.
-- The distances are defined both as days and as the number of sessions.
-- The accuracies are calculated for the visual and the memory sessions separately, as well as for the combined sessions.
+
 """
 
 import numpy as np
@@ -16,7 +14,7 @@ from scipy.stats import pearsonr
 from scipy.stats import ttest_1samp
 
 # set parameters for all plots
-plt.rcParams['font.family'] = 'Serif'
+plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -27,7 +25,6 @@ plt.rcParams['legend.fontsize'] = 10
 plt.rcParams['legend.title_fontsize'] = 12
 plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
-
 
 def x_axis_seconds(ax):
     """
@@ -96,8 +93,8 @@ def plot_corr(ax, corr, pval):
     ax.set_xlim([0, 250])
 
 
-def plot_correlations(acc, save_path = None):
-    
+def plot_corr_hist(acc, save_path = None):
+           
     # only memory
     mem_indices = [4, 5, 6, 7]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
@@ -109,13 +106,18 @@ def plot_correlations(acc, save_path = None):
     # order of sessions
     order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6] 
 
-    bin_range = (-0.75, 0.75)
-    bins = np.linspace(bin_range[0], bin_range[1], 40)
+    # set up figure
+    gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
+    fig, axes = plt.subplots(3, 2, figsize=(10, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
-    fig, axes = plt.subplots(3, 2, figsize=(10, 10), dpi=300)
+    bin_range = (-0.75, 0.75)
+
+    bins = np.linspace(bin_range[0], bin_range[1], 40)
 
     for i, (acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
         dist = get_distance_matrix(order)
+        ax_hist = axes[i, 1]
+        ax_corr = axes[i, 0]
 
         # use indices for visual and memory, not for combined
         if inds is not None:
@@ -127,40 +129,44 @@ def plot_correlations(acc, save_path = None):
         # get correlation and p-values
         corr, pval = get_corr_pval(X, y)
 
-        # plot
-        plot_corr(axes[i, 0], corr, pval)
-
+        # test if mean of correlations is significantly different from 0
         t, p = ttest_1samp(corr, 0)
         print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
 
-
+        # plot correlation
+        ax_corr.plot(corr) 
+            
+        # seconds on x axis
+        x_axis_seconds(ax_corr)
+            
+        # set limits
+        ax_corr.set_xlim([0, 250])
+        
         # plot histogram of correlations
-        axes[i, 1].hist(corr, bins = bins, color="lightblue")
-
-        # add mean correlation and p-value
-        axes[i, 1].text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=axes[i, 1].transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+        ax_hist.hist(corr, bins = bins, color="lightblue", orientation="horizontal")
+        ax_hist.set_axis_off()
 
         # vertical line at mean
-        axes[i, 1].axvline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
+        ax_hist.axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
 
-    fig.supxlabel("Time (s)", fontsize=16)
-    fig.supylabel("Pearson's r", fontsize=16)
-    fig.suptitle("Bins", fontsize=20)
+        # add mean correlation and p-value
+        ax_hist.text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax_hist.transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+            
+
+    axes[2, 0].set_xlabel("TIME (s)", fontsize=16)
+    fig.supylabel("PEARSON'S R", fontsize=16)
+
     
-    # first column y label
-    axes[0, 0].set_ylabel("Visual")
-    axes[1, 0].set_ylabel("Memory")
-    axes[2, 0].set_ylabel("Combined")
+    axes[0, 0].set_ylabel("Visual".upper())
+    axes[1, 0].set_ylabel("Memory".upper())
+    axes[2, 0].set_ylabel("Combined".upper())
+    
 
-    # first row x label
-    axes[0, 0].set_title("Correlation")
-    axes[0, 1].set_title("Histogram of correlations")
+    # share title between columns
+    axes[0, 0].set_title("bins".upper())
 
-
-    plt.tight_layout()
     if save_path is not None:
         plt.savefig(save_path )
-
 
 def main():
     path = Path(__file__)
@@ -170,7 +176,7 @@ def main():
     plot_path = path.parents[0] / "plots" 
 
     # plot
-    plot_correlations(acc, save_path=plot_path / "corr_acc_dist.png")
+    plot_corr_hist(acc, save_path=plot_path / "corr_acc_dist.png")
 
         
 
