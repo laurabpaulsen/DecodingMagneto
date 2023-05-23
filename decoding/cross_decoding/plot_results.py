@@ -8,16 +8,14 @@ sys.path.append(str(pathlib.Path(__file__).parents[2]))
 from utils.analysis import plot
 from utils.analysis.tools import chance_level
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import numpy as np
 import os
 import seaborn as sns
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 alpha = 0.05
 
 # set parameters for all plots
-plt.rcParams['font.family'] = 'times new roman'
+plt.rcParams['font.family'] = 'Serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -96,6 +94,8 @@ def plot_sig_clusters(ax, array_name):
     ax.contour(cluster_array, levels = [0.5], colors = "k", linewidths = 0.3, alpha = 0.7)
 
 
+def add_dif_label(ax, label):
+    ax.text(-0.08, 1.1, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = 'red', alpha = 0.7)
 
 def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
     fig, axs = plt.subplots(4, 3, figsize = (15, 15), dpi = 300)
@@ -112,47 +112,54 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
     # VIS VIS
     vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
     axs[1, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='train: vis,  test:vis')
-
-    # put A in the left top corner
     axs[1,0].text(-0.1, 1.1, 'A', transform=axs[1,0].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     # MEM MEM
     mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
-    axs[1, 1] = plot.plot_tgm_ax(mem_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="train:mem, test:mem")
+    axs[1, 1] = plot.plot_tgm_ax(mem_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="train:mem, test:mem".upper())
+    axs[1,1].text(-0.1, 1.1, 'B', transform=axs[1,1].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     # VIS MEM
     vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
     axs[2, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'train:vis, test:mem')
+    axs[2,0].text(-0.1, 1.1, 'C', transform=axs[2,0].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     # MEM VIS
     mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
     axs[2, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='train:mem, test:vis')
+    axs[2,1].text(-0.1, 1.1, 'D', transform=axs[2,1].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     ### DIFFERENCE PLOTS ###
     # difference between test and train condition (vis - mem)
-    axs[1, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:vis - train:mem, test:mem')
+    axs[1, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
     plot_sig_clusters(axs[1, 2], "visvis_memmem")
+    add_dif_label(axs[1, 2], 'A-B')
 
     # difference between test and train condition
-    axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:mem - train:mem, test:vis')
+    axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff)
     plot_sig_clusters(axs[2, 2], "vismem_memvis")
+    add_dif_label(axs[2, 2], 'C-D')
 
     # difference between vis_vis and vis_mem
-    axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:vis - train:vis, test:mem')
+    axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff)
     plot_sig_clusters(axs[3, 0], "visvis_vismem")
+    add_dif_label(axs[3, 0], 'A-C')
     
 
     # difference between mem_mem and mem_vis
-    axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff, title='train:mem, test:mem - train:mem, test:vis')
+    axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff)
     plot_sig_clusters(axs[3, 1], "memmem_memvis")
+    add_dif_label(axs[3, 1], 'B-D')
 
     # difference between vis_vis and mem_vis
-    axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:vis - train:mem, test:vis')
+    axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff)
     plot_sig_clusters(axs[3, 2], "visvis_memvis")
+    add_dif_label(axs[3, 2], 'A-D')
 
     # difference between vis_mem and mem_mem
-    axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:mem - train:mem, test:mem')
+    axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff)
     plot_sig_clusters(axs[0, 2], "vismem_memmem")
+    add_dif_label(axs[0, 2], 'C-B')
 
 
     for ax in axs[[2, 3, 3, 3, 1, 3, 0], [2, 2, 0, 1, 2, 2, 2]].flatten(): # difference plots
@@ -162,7 +169,7 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
     # plot colourbars in the first two columns of the first row
 
     colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
-    labels = ['Accuracy (%)', 'Accuracy difference (%)']
+    labels = ['ACCURACY (%)', 'DIFFERENCE (%)']
     for i, ax in enumerate(axs[0, :2]):
         # remove the axis
         ax.axis('off')

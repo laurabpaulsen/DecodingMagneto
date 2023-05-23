@@ -12,11 +12,14 @@ from pathlib import Path
 # get pearsons r
 from scipy.stats import pearsonr
 
+# t-test
+from scipy.stats import ttest_1samp
+
 # dates from pandas
 from pandas import to_datetime
 
 # set parameters for all plots
-plt.rcParams['font.family'] = 'times new roman'
+plt.rcParams['font.family'] = 'Serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -96,13 +99,8 @@ def plot_corr(ax, corr, pval):
     ax.set_xlim([0, 250])
 
 
-
-def main():
-    path = Path(__file__).parent
-
-    # load accuracies
-    acc = np.load(path / "accuracies" / f"cross_decoding_10_LDA_sens.npy", allow_pickle=True)
-
+def plot_correlations(acc, save_path = None):
+    
     # only memory
     mem_indices = [4, 5, 6, 7]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
@@ -152,13 +150,100 @@ def main():
     axes[0, 0].set_title("Days")
     axes[0, 1].set_title("Sessions")
 
-    # save huge figure
+
     plt.tight_layout()
-    plt.savefig(path / "plots" / f"corr_acc_dist.png")
+    if save_path is not None:
+        plt.savefig(save_path )
 
-
+def plot_hist_correlations(acc, save_path = None):
         
+    # only memory
+    mem_indices = [4, 5, 6, 7]
+    mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
 
+    # only visual
+    vis_indices = [0, 1, 2, 3, 8, 9, 10]
+    vis_acc = acc[vis_indices, :, :, :][:, vis_indices, :, :]
+
+    # order of sessions
+    order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6] 
+
+    # convert to datetime
+    dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
+
+    fig, axes = plt.subplots(3, 2, figsize=(10, 10), dpi=300, sharex=True, sharey=True)
+
+    bin_range = (-0.75, 0.75)
+
+    bins = np.linspace(bin_range[0], bin_range[1], 40)
+
+    for i, (acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
+        for j, dist_type in enumerate(["dates", "order"]):
+            if dist_type == "dates":
+                dist = get_distance_matrix(dates)
+            elif dist_type == "order":
+                dist = get_distance_matrix(order)
+
+            # use indices for visual and memory, not for combined
+            if inds is not None:
+                dist = dist[inds, :][:, inds]
+
+            # get x and y
+            X, y = prep_x_y(acc, dist)
+
+            # get correlation and p-values
+            corr, pval = get_corr_pval(X, y)
+
+            # test if mean of correlations is significantly different from 0
+            t, p = ttest_1samp(corr, 0)
+            print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
+
+
+            # plot histogram of correlations
+            axes[i, j].hist(corr, bins = bins, color="lightblue")
+
+            # add mean correlation and p-value
+            axes[i, j].text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=axes[i, j].transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+
+            # vertical line at mean
+            axes[i, j].axvline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
+
+    # legend at last subplot
+    axes[2, 1].legend(loc="upper right")
+
+
+    fig.supxlabel("", fontsize=16)
+    fig.supylabel("", fontsize=16)
+    fig.suptitle("Histogram of correlations", fontsize=20)
+    
+    # first column y label
+    axes[0, 0].set_ylabel("Visual")
+    axes[1, 0].set_ylabel("Memory")
+    axes[2, 0].set_ylabel("Combined")
+
+    # first row x label
+    axes[0, 0].set_title("Days")
+    axes[0, 1].set_title("Sessions")
+
+
+    plt.tight_layout()
+    if save_path is not None:
+        plt.savefig(save_path )
+
+
+def main():
+    path = Path(__file__)
+
+    # load accuracies
+    acc = np.load(path.parents[0] / "accuracies" / f"cross_decoding_10_LDA_sens.npy", allow_pickle=True)
+    plot_path = path.parents[0] / "plots" 
+
+    # plot
+    plot_correlations(acc, save_path=plot_path / "corr_acc_dist.png")
+
+    # plot histogram
+    plot_hist_correlations(acc, save_path=plot_path / "hist_corr_acc_dist.png")
+        
 
 if __name__ == "__main__":
     main()
