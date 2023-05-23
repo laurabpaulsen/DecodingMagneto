@@ -5,7 +5,7 @@ import numpy as np
 colours = ['#0063B2FF', '#5DBB63FF']
 
 # set font for all plots
-plt.rcParams['font.family'] = 'Serif'
+plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -46,9 +46,8 @@ def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = F
     if chance_level is not None:
         ax.contour(X*100, levels=[chance_level*100], colors='gray', alpha = 0.5, linewidths=0.5)
 
-
-    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax.set_yticks(np.arange(0, 252, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax.set_xticks(np.arange(0, 252, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
     
     if colour_bar:
         cb = plt.colorbar(im, ax = ax, location = 'top', shrink = 0.5)

@@ -6,6 +6,7 @@ This script investigates the correlation between the decoding accuracies and the
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from scipy.stats import ttest_1samp
 from pandas import to_datetime
 
 # set parameters for all plots
-plt.rcParams['font.family'] = 'Serif'
+plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -84,7 +85,7 @@ def get_corr_pval(X, y):
 
 def plot_corr(ax, corr, pval):
     # plot correlation
-    ax.plot(corr, color="darkblue", linewidth=1.5)
+    ax.plot(corr, color="lightblue", linewidth=1.5)
 
     # plot significance
     sig = np.where(pval < 0.05)[0]
@@ -99,8 +100,8 @@ def plot_corr(ax, corr, pval):
     ax.set_xlim([0, 250])
 
 
-def plot_correlations(acc, save_path = None):
-    
+def plot_corr_hist(acc, save_path = None):
+           
     # only memory
     mem_indices = [4, 5, 6, 7]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
@@ -115,63 +116,11 @@ def plot_correlations(acc, save_path = None):
     # convert to datetime
     dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
 
-    fig, axes = plt.subplots(3, 2, figsize=(10, 10), dpi=300)
-
-    for i, (acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
-        for j, dist_type in enumerate(["dates", "order"]):
-            if dist_type == "dates":
-                dist = get_distance_matrix(dates)
-            elif dist_type == "order":
-                dist = get_distance_matrix(order)
-
-            # use indices for visual and memory, not for combined
-            if inds is not None:
-                dist = dist[inds, :][:, inds]
-
-            # get x and y
-            X, y = prep_x_y(acc, dist)
-
-            # get correlation and p-values
-            corr, pval = get_corr_pval(X, y)
-
-            # plot
-            plot_corr(axes[i, j], corr, pval)
-
-    fig.supxlabel("Time (s)", fontsize=16)
-    fig.supylabel("Pearson's r", fontsize=16)
-    fig.suptitle("Correlation between decoding accuracy and distance between sessions", fontsize=20)
-    
-    # first column y label
-    axes[0, 0].set_ylabel("Visual")
-    axes[1, 0].set_ylabel("Memory")
-    axes[2, 0].set_ylabel("Combined")
-
-    # first row x label
-    axes[0, 0].set_title("Days")
-    axes[0, 1].set_title("Sessions")
+    # set up figure
+    gs_kw = dict(width_ratios=[1, 0.4, 1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
+    fig, axes = plt.subplots(3, 4, figsize=(12, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
 
-    plt.tight_layout()
-    if save_path is not None:
-        plt.savefig(save_path )
-
-def plot_hist_correlations(acc, save_path = None):
-        
-    # only memory
-    mem_indices = [4, 5, 6, 7]
-    mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
-
-    # only visual
-    vis_indices = [0, 1, 2, 3, 8, 9, 10]
-    vis_acc = acc[vis_indices, :, :, :][:, vis_indices, :, :]
-
-    # order of sessions
-    order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6] 
-
-    # convert to datetime
-    dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
-
-    fig, axes = plt.subplots(3, 2, figsize=(10, 10), dpi=300, sharex=True, sharey=True)
 
     bin_range = (-0.75, 0.75)
 
@@ -183,6 +132,9 @@ def plot_hist_correlations(acc, save_path = None):
                 dist = get_distance_matrix(dates)
             elif dist_type == "order":
                 dist = get_distance_matrix(order)
+
+            ax_hist = axes[i, j*2+1]
+            ax_corr = axes[i, j*2]
 
             # use indices for visual and memory, not for combined
             if inds is not None:
@@ -198,35 +150,44 @@ def plot_hist_correlations(acc, save_path = None):
             t, p = ttest_1samp(corr, 0)
             print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
 
+            # plot correlation
+            ax_corr.plot(corr) 
+            # seconds on x axis
+            x_axis_seconds(ax_corr)
+            
+            # set limits
+            ax_corr.set_xlim([0, 250])
 
             # plot histogram of correlations
-            axes[i, j].hist(corr, bins = bins, color="lightblue")
-
-            # add mean correlation and p-value
-            axes[i, j].text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=axes[i, j].transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+            ax_hist.hist(corr, bins = bins, color="lightblue", orientation="horizontal")
+            ax_hist.set_axis_off()
 
             # vertical line at mean
-            axes[i, j].axvline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
+            ax_hist.axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
 
-    # legend at last subplot
-    axes[2, 1].legend(loc="upper right")
+            # add mean correlation and p-value
+            ax_hist.text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax_hist.transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+            
 
+    fig.supxlabel("TIME (s)", fontsize=16)
+    fig.supylabel("PEARSON'S R", fontsize=16)
 
-    fig.supxlabel("", fontsize=16)
-    fig.supylabel("", fontsize=16)
-    fig.suptitle("Histogram of correlations", fontsize=20)
     
     # first column y label
-    axes[0, 0].set_ylabel("Visual")
-    axes[1, 0].set_ylabel("Memory")
-    axes[2, 0].set_ylabel("Combined")
+    axes[0, 0].set_ylabel("Visual".upper())
+    axes[1, 0].set_ylabel("Memory".upper())
+    axes[2, 0].set_ylabel("Combined".upper())
+
+    # share title between columns
+    axes[0, 0].set_title("Days".upper())
+    axes[0, 2].set_title("Sessions".upper())
+
+
 
     # first row x label
-    axes[0, 0].set_title("Days")
-    axes[0, 1].set_title("Sessions")
+    #axes[0, 0:2].set_title("Days")
+    #axes[0, 2:4].set_title("Sessions")
 
-
-    plt.tight_layout()
     if save_path is not None:
         plt.savefig(save_path )
 
@@ -239,10 +200,8 @@ def main():
     plot_path = path.parents[0] / "plots" 
 
     # plot
-    plot_correlations(acc, save_path=plot_path / "corr_acc_dist.png")
+    plot_corr_hist(acc, save_path=plot_path / "corr_acc_dist.png")
 
-    # plot histogram
-    plot_hist_correlations(acc, save_path=plot_path / "hist_corr_acc_dist.png")
         
 
 if __name__ == "__main__":

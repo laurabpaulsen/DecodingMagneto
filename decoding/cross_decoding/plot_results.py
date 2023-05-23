@@ -15,7 +15,7 @@ import seaborn as sns
 alpha = 0.05
 
 # set parameters for all plots
-plt.rcParams['font.family'] = 'Serif'
+plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -26,6 +26,7 @@ plt.rcParams['legend.fontsize'] = 10
 plt.rcParams['legend.title_fontsize'] = 12
 plt.rcParams['figure.titlesize'] = 18
 plt.rcParams['figure.dpi'] = 300
+
 
 def determine_linestyle(train_condition, test_condition):
     if train_condition == test_condition:
@@ -90,15 +91,22 @@ def plot_cross_decoding_matrix(acc, save_path = None):
 def plot_sig_clusters(ax, array_name):
     # add significant clusters to plot as contour
     cluster_array = np.load(f'permutation/sens_sig_clusters_{array_name}.npy', allow_pickle=True)
+
     # plot contour where value is 1
     ax.contour(cluster_array, levels = [0.5], colors = "k", linewidths = 0.3, alpha = 0.7)
+
+    # somehow ax.contour messes with the axis, so we need to reset it
+    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+
+    return ax
 
 
 def add_dif_label(ax, label):
     ax.text(-0.08, 1.1, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = 'red', alpha = 0.7)
 
 def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
-    fig, axs = plt.subplots(4, 3, figsize = (15, 15), dpi = 300)
+    fig, axs = plt.subplots(4, 3, figsize = (12, 12*4/3), dpi = 300)
     
     vis = np.array([0, 1, 2, 3, 4, 5, 6])
     mem = np.array([7, 8, 9, 10])
@@ -111,7 +119,8 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
     
     # VIS VIS
     vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
-    axs[1, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='train: vis,  test:vis')
+
+    axs[1, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='train: vis,  test:vis'.upper())
     axs[1,0].text(-0.1, 1.1, 'A', transform=axs[1,0].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     # MEM MEM
@@ -121,23 +130,23 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
 
     # VIS MEM
     vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
-    axs[2, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'train:vis, test:mem')
+    axs[2, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'train:vis, test:mem'.upper())
     axs[2,0].text(-0.1, 1.1, 'C', transform=axs[2,0].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     # MEM VIS
     mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
-    axs[2, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='train:mem, test:vis')
+    axs[2, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='train:mem, test:vis'.upper())
     axs[2,1].text(-0.1, 1.1, 'D', transform=axs[2,1].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     ### DIFFERENCE PLOTS ###
     # difference between test and train condition (vis - mem)
-    axs[1, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
+    axs[1, 2] = plot.plot_tgm_ax(np.array(vis_vis - mem_mem), ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
     plot_sig_clusters(axs[1, 2], "visvis_memmem")
     add_dif_label(axs[1, 2], 'A-B')
 
     # difference between test and train condition
     axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff)
-    plot_sig_clusters(axs[2, 2], "vismem_memvis")
+    axs[2, 2]= plot_sig_clusters(axs[2, 2], "vismem_memvis")
     add_dif_label(axs[2, 2], 'C-D')
 
     # difference between vis_vis and vis_mem
@@ -148,21 +157,22 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
 
     # difference between mem_mem and mem_vis
     axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff)
-    plot_sig_clusters(axs[3, 1], "memmem_memvis")
+    axs[3, 1] = plot_sig_clusters(axs[3, 1], "memmem_memvis")
     add_dif_label(axs[3, 1], 'B-D')
 
     # difference between vis_vis and mem_vis
     axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff)
-    plot_sig_clusters(axs[3, 2], "visvis_memvis")
+    axs[3, 2] = plot_sig_clusters(axs[3, 2], "visvis_memvis")
     add_dif_label(axs[3, 2], 'A-D')
 
     # difference between vis_mem and mem_mem
     axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff)
-    plot_sig_clusters(axs[0, 2], "vismem_memmem")
+    axs[0, 2] =plot_sig_clusters(axs[0, 2], "vismem_memmem")
     add_dif_label(axs[0, 2], 'C-B')
 
 
     for ax in axs[[2, 3, 3, 3, 1, 3, 0], [2, 2, 0, 1, 2, 2, 2]].flatten(): # difference plots
+        x_axis_seconds(ax)
         change_spine_colour(ax, diff_colour)
         add_diagonal_line(ax)
 
@@ -174,12 +184,11 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
         # remove the axis
         ax.axis('off')
         # add colourbar
-        cb = plt.colorbar(colour_loc[i], ax = ax, orientation = 'horizontal', pad = 0.9, shrink = 0.7, location = "top")
-        cb.ax.set_title(labels[i], fontsize = 16)
+        cb = plt.colorbar(colour_loc[i], ax = ax, orientation = 'horizontal', pad = 0.9, shrink = 0.8, location = "bottom")
+        cb.ax.set_title(labels[i], fontsize = 14)
 
         if i == 1:
             change_spine_colour(cb.ax, diff_colour)
-
 
     plt.tight_layout()
     plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average_vis_mem.png'))
