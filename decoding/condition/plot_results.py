@@ -9,6 +9,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
+# set parameters for all plots
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['image.cmap'] = 'RdBu_r'
+plt.rcParams['image.interpolation'] = 'bilinear'
+plt.rcParams['axes.labelsize'] = 14
+plt.rcParams['axes.titlesize'] = 14
+plt.rcParams['xtick.labelsize'] = 12
+plt.rcParams['ytick.labelsize'] = 12
+plt.rcParams['legend.fontsize'] = 10
+plt.rcParams['legend.title_fontsize'] = 12
+plt.rcParams['figure.titlesize'] = 18
+plt.rcParams['figure.dpi'] = 300
+
 if __name__ == "__main__":
     acc = np.load(os.path.join('accuracies', 'accuracies_memory_or_visual.npy'), allow_pickle=True)
 
