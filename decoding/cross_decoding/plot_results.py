@@ -8,6 +8,7 @@ sys.path.append(str(pathlib.Path(__file__).parents[2]))
 from utils.analysis import plot
 from utils.analysis.tools import chance_level
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import numpy as np
 import os
 import seaborn as sns
@@ -25,7 +26,7 @@ plt.rcParams['xtick.labelsize'] = 12
 plt.rcParams['ytick.labelsize'] = 12
 plt.rcParams['legend.fontsize'] = 10
 plt.rcParams['legend.title_fontsize'] = 12
-plt.rcParams['figure.titlesize'] = 14
+plt.rcParams['figure.titlesize'] = 18
 plt.rcParams['figure.dpi'] = 300
 
 def determine_linestyle(train_condition, test_condition):
@@ -44,6 +45,8 @@ def add_diagonal_line(ax):
     Adds a diagonal line to a plot
     """
     ax.plot([0, 1], [0, 1], transform=ax.transAxes, color = 'red', linestyle = '--', alpha = 0.5, linewidth = 1)
+
+
 
 def change_spine_colour(ax, colour):
     """
@@ -108,61 +111,48 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
     
     # VIS VIS
     vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
-    axs[1, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5))
-    axs[1, 0].set_title('train: vis,  test:vis')
+    axs[1, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='train: vis,  test:vis')
+
+    # put A in the left top corner
+    axs[1,0].text(-0.1, 1.1, 'A', transform=axs[1,0].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     # MEM MEM
     mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
-    axs[1, 1] = plot.plot_tgm_ax(mem_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5))
-    axs[1, 1].set_title('train:mem, test:mem')
+    axs[1, 1] = plot.plot_tgm_ax(mem_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="train:mem, test:mem")
 
     # VIS MEM
     vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
-    axs[2, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5))
-    axs[2, 0].set_title('train:vis, test:mem')
+    axs[2, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'train:vis, test:mem')
 
     # MEM VIS
     mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
-    axs[2, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5))
-    axs[2, 1].set_title('train:mem, test:vis')
+    axs[2, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='train:mem, test:vis')
 
     ### DIFFERENCE PLOTS ###
     # difference between test and train condition (vis - mem)
-    axs[1, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
-    tmp_title = 'visvis_memmem'
-    axs[1, 2].set_title(tmp_title)
-    plot_sig_clusters(axs[1, 2], tmp_title)
+    axs[1, 2] = plot.plot_tgm_ax(vis_vis - mem_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:vis - train:mem, test:mem')
+    plot_sig_clusters(axs[1, 2], "visvis_memmem")
 
     # difference between test and train condition
-    axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff)
-    tmp_title = 'vismem_memvis'
-    axs[2, 2].set_title(tmp_title)
-    plot_sig_clusters(axs[2, 2], tmp_title)
+    axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:mem - train:mem, test:vis')
+    plot_sig_clusters(axs[2, 2], "vismem_memvis")
 
     # difference between vis_vis and vis_mem
-    axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff)
-    tmp_title = 'visvis_vismem'
-    axs[3, 0].set_title(tmp_title)
-    plot_sig_clusters(axs[3, 0], tmp_title)
+    axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:vis - train:vis, test:mem')
+    plot_sig_clusters(axs[3, 0], "visvis_vismem")
     
 
     # difference between mem_mem and mem_vis
-    axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff)
-    tmp_title = 'memmem_memvis'
-    axs[3, 1].set_title(tmp_title)
-    plot_sig_clusters(axs[3, 1], tmp_title)
+    axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff, title='train:mem, test:mem - train:mem, test:vis')
+    plot_sig_clusters(axs[3, 1], "memmem_memvis")
 
     # difference between vis_vis and mem_vis
-    axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff)
-    tmp_title = 'visvis_memvis'
-    axs[3, 2].set_title(tmp_title)
-    plot_sig_clusters(axs[3, 2], tmp_title)
+    axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:vis - train:mem, test:vis')
+    plot_sig_clusters(axs[3, 2], "visvis_memvis")
 
     # difference between vis_mem and mem_mem
-    axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff)
-    tmp_title = 'vismem_memmem'
-    axs[0, 2].set_title(tmp_title)
-    plot_sig_clusters(axs[0, 2], tmp_title)
+    axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff, title='train:vis, test:mem - train:mem, test:mem')
+    plot_sig_clusters(axs[0, 2], "vismem_memmem")
 
 
     for ax in axs[[2, 3, 3, 3, 1, 3, 0], [2, 2, 0, 1, 2, 2, 2]].flatten(): # difference plots
@@ -170,23 +160,19 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
         add_diagonal_line(ax)
 
     # plot colourbars in the first two columns of the first row
-    gs = axs[0, 0].get_gridspec()
 
-    # remove the underlying axes
-    for ax in axs[0, :2]:
-        ax.remove()
-    axbig = fig.add_subplot(gs[0, :2])
-    axbig.axis('off')
-    divider = make_axes_locatable(axbig)
+    colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
+    labels = ['Accuracy (%)', 'Accuracy difference (%)']
+    for i, ax in enumerate(axs[0, :2]):
+        # remove the axis
+        ax.axis('off')
+        # add colourbar
+        cb = plt.colorbar(colour_loc[i], ax = ax, orientation = 'horizontal', pad = 0.9, shrink = 0.7, location = "top")
+        cb.ax.set_title(labels[i], fontsize = 16)
 
-    cax = divider.append_axes("top", size="20%", pad=0.1)
-    cax1 = divider.append_axes("bottom", size="20%", pad=0.1)
-    clb1 = fig.colorbar(axs[1, 0].images[0], cax = cax, orientation='horizontal', shrink = 2, pad=10)
-    clb1.ax.set_title('accuracy (%)')
+        if i == 1:
+            change_spine_colour(cb.ax, diff_colour)
 
-    clb2 = fig.colorbar(axs[1, 2].images[0], cax = cax1, orientation='horizontal', shrink = 2, pad=10)
-    clb2.ax.set_title('difference (%)')
-    change_spine_colour(clb2.ax, diff_colour)
 
     plt.tight_layout()
     plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average_vis_mem.png'))
