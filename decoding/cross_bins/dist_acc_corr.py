@@ -93,19 +93,7 @@ def plot_corr(ax, corr, pval):
     ax.set_xlim([0, 250])
 
 
-def plot_corr_hist(acc, save_path = None):
-           
-    # only memory
-    mem_indices = [4, 5, 6, 7]
-    mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
-
-    # only visual
-    vis_indices = [0, 1, 2, 3, 8, 9, 10]
-    vis_acc = acc[vis_indices, :, :, :][:, vis_indices, :, :]
-
-    # order of sessions
-    order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6] 
-
+def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
     # set up figure
     gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
     fig, axes = plt.subplots(3, 2, figsize=(10, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
@@ -114,14 +102,11 @@ def plot_corr_hist(acc, save_path = None):
 
     bins = np.linspace(bin_range[0], bin_range[1], 40)
 
-    for i, (acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
+    for i, acc in enumerate([vis_acc, mem_acc, acc]):
         dist = get_distance_matrix(order)
         ax_hist = axes[i, 1]
         ax_corr = axes[i, 0]
 
-        # use indices for visual and memory, not for combined
-        if inds is not None:
-            dist = dist[inds, :][:, inds]
 
         # get x and y
         X, y = prep_x_y(acc, dist)
@@ -172,11 +157,14 @@ def main():
     path = Path(__file__)
 
     # load accuracies
-    acc = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10.npy", allow_pickle=True)
+    acc_all = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_all.npy", allow_pickle=True)
+    acc_vis = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_visual.npy", allow_pickle=True)
+    acc_mem = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_memory.npy", allow_pickle=True)
+    
     plot_path = path.parents[0] / "plots" 
 
     # plot
-    plot_corr_hist(acc, save_path=plot_path / "corr_acc_dist.png")
+    plot_corr_hist(vacc_vis, acc_mem, acc_all, save_path=plot_path / "corr_acc_dist.png")
 
         
 

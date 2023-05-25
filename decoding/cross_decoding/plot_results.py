@@ -39,12 +39,11 @@ def determine_colour(i, j):
 
     return colors[abs(i-j)]
 
-def add_diagonal_line(ax):
+def add_diagonal_line(ax, colour = 'red'):
     """
     Adds a diagonal line to a plot
     """
-    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color = 'red', linestyle = '--', alpha = 0.5, linewidth = 1)
-
+    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color = colour, linestyle = '--', alpha = 0.5, linewidth = 1)
 
 
 def change_spine_colour(ax, colour):
@@ -102,8 +101,8 @@ def plot_sig_clusters(ax, array_name):
     return ax
 
 
-def add_dif_label(ax, label):
-    ax.text(-0.08, 1.1, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = 'red', alpha = 0.7)
+def add_dif_label(ax, label, colour = 'red'):
+    ax.text(-0.08, 1.1, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
 
 def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
     fig, axs = plt.subplots(4, 3, figsize = (12, 12*4/3), dpi = 300)
@@ -139,45 +138,44 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
     axs[2,1].text(-0.1, 1.1, 'D', transform=axs[2,1].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
 
     ### DIFFERENCE PLOTS ###
+    colour_map_diff = "PuOr_r" # sns.diverging_palette(220, 20, s = 70, l = 70, as_cmap=True)
     # difference between test and train condition (vis - mem)
-    axs[1, 2] = plot.plot_tgm_ax(np.array(vis_vis - mem_mem), ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff)
+    axs[1, 2] = plot.plot_tgm_ax(np.array(vis_vis - mem_mem), ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
     plot_sig_clusters(axs[1, 2], "visvis_memmem")
-    add_dif_label(axs[1, 2], 'A-B')
+    add_dif_label(axs[1, 2], 'A-B', colour = diff_colour)
 
     # difference between test and train condition
-    axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff)
+    axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
     axs[2, 2]= plot_sig_clusters(axs[2, 2], "vismem_memvis")
-    add_dif_label(axs[2, 2], 'C-D')
+    add_dif_label(axs[2, 2], 'C-D', colour = diff_colour)
 
     # difference between vis_vis and vis_mem
-    axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff)
+    axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
     plot_sig_clusters(axs[3, 0], "visvis_vismem")
-    add_dif_label(axs[3, 0], 'A-C')
-    
+    add_dif_label(axs[3, 0], 'A-C', colour = diff_colour)
 
     # difference between mem_mem and mem_vis
-    axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff)
+    axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
     axs[3, 1] = plot_sig_clusters(axs[3, 1], "memmem_memvis")
-    add_dif_label(axs[3, 1], 'B-D')
+    add_dif_label(axs[3, 1], 'B-D', colour = diff_colour)
 
     # difference between vis_vis and mem_vis
-    axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff)
+    axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
     axs[3, 2] = plot_sig_clusters(axs[3, 2], "visvis_memvis")
-    add_dif_label(axs[3, 2], 'A-D')
+    add_dif_label(axs[3, 2], 'A-D', colour = diff_colour)
 
     # difference between vis_mem and mem_mem
-    axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff)
+    axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
     axs[0, 2] =plot_sig_clusters(axs[0, 2], "vismem_memmem")
-    add_dif_label(axs[0, 2], 'C-B')
+    add_dif_label(axs[0, 2], 'C-B', colour = diff_colour)
 
 
     for ax in axs[[2, 3, 3, 3, 1, 3, 0], [2, 2, 0, 1, 2, 2, 2]].flatten(): # difference plots
         x_axis_seconds(ax)
         change_spine_colour(ax, diff_colour)
-        add_diagonal_line(ax)
+        add_diagonal_line(ax, colour = diff_colour)
 
     # plot colourbars in the first two columns of the first row
-
     colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
     labels = ['ACCURACY (%)', 'DIFFERENCE (%)']
     for i, ax in enumerate(axs[0, :2]):
@@ -189,6 +187,9 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
 
         if i == 1:
             change_spine_colour(cb.ax, diff_colour)
+
+    axs[2,0].set_ylabel('TRAIN TIME (s)', fontsize=14)
+    axs[-1,1].set_xlabel('TEST TIME (s)', fontsize=14)
 
     plt.tight_layout()
     plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average_vis_mem.png'))
@@ -218,8 +219,8 @@ def plot_diagonals(acc_dict, title = 'diagonals', save_path = None):
     for key, value in dict_diag.items():
         ax.plot(value, label=key)
 
-    ax.set_xlabel('time (ms)')
-    ax.set_ylabel('accuracy')
+    ax.set_xlabel('time (ms)'.upper())
+    ax.set_ylabel('accuracy'.upper())
     ax.set_title(title)
     ax.legend()
     if save_path:
@@ -232,7 +233,6 @@ def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
     # multiply by 100 to get percentages
     diagonals = diagonals * 100
 
-    
 
     order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6]
 
@@ -290,7 +290,7 @@ def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
                     ax[ax_ind].fill_between(np.arange(0, 250), (tmp_acc - tmp_std), (tmp_acc + tmp_std), alpha = 0.1, color =colour)
                 
             # plot legend
-            ax[ax_ind].legend(loc = 'upper right', title = "Distance")
+            ax[ax_ind].legend(loc = 'upper right', title = "Distance".upper())
             ax[ax_ind].set_ylabel(['Visual', 'Memory', 'Combined'][ax_ind].upper())
                 
             # set x axis to seconds
@@ -331,11 +331,11 @@ def main_plot_generator():
         accuracies_cross[parc] = acc1
 
         # plot average over all conditions and all cross-session pairs
-        plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
+        plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), )
         plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
 
         # plot averaged according to conditions and using cross-session pairs
-        plot_train_test_condition(acc1, parc, diff_colour='red')
+        plot_train_test_condition(acc1, parc, diff_colour='darkblue')
 
 
     # Diagonals of the parcellations together

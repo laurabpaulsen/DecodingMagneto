@@ -13,7 +13,7 @@ import multiprocessing as mp
 import argparse
 from functools import partial
 from pathlib import Path
-
+from p_tqdm import p_imap
 # local imports
 import sys
 import pathlib
@@ -113,12 +113,11 @@ def get_accuracy_session(Xs:list, ys:list, decoder:Decoder, n_jobs:int=1):
     multi_parse = partial(get_accuracy, Xs, ys, decoder)
 
     # multiprocessing
-    with mp.Pool(n_jobs) as p:
-        for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
-            accuracies[train_session, test_session, :, :] = accuracy
-        
-    p.close()
-    p.join()
+    iterator = p_imap(multi_parse, decoding_inputs, num_cpus=n_jobs)
+
+    for train_session, test_session, accuracy in iterator:
+        accuracies[train_session, test_session, :, :] = accuracy
+
 
     return accuracies
 
@@ -136,6 +135,8 @@ def main():
         sessions = sessions[7:]
     elif args.data_subset == 'visual':
         sessions = sessions[:7]
+    else: 
+        raise ValueError(f'Invalid data subset: {args.data_subset}. Can be either all, memory or visual.')
     
     # get triggers for equal number of trials per condition (27 animate and 27 inanimate)
     triggers = get_triggers_equal()
@@ -162,7 +163,7 @@ def main():
     accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
 
     # save accuracies
-    out_path = path.parent / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}_{args.data_subset}.npy"
+    out_path = path.parent / "accuracies" / f"{args.model_type}_{args.alpha}_{args.ncv}_{args.data_subset}.npy"
         
     # ensure accuracy directory exists
     if not out_path.parent.exists():

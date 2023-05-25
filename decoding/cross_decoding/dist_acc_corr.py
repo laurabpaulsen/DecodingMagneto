@@ -120,8 +120,6 @@ def plot_corr_hist(acc, save_path = None):
     gs_kw = dict(width_ratios=[1, 0.4, 1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
     fig, axes = plt.subplots(3, 4, figsize=(12, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
-
-
     bin_range = (-0.75, 0.75)
 
     bins = np.linspace(bin_range[0], bin_range[1], 40)
@@ -182,11 +180,6 @@ def plot_corr_hist(acc, save_path = None):
     axes[0, 0].set_title("Days".upper())
     axes[0, 2].set_title("Sessions".upper())
 
-
-
-    # first row x label
-    #axes[0, 0:2].set_title("Days")
-    #axes[0, 2:4].set_title("Sessions")
 
     if save_path is not None:
         plt.savefig(save_path )
