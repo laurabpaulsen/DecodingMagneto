@@ -31,9 +31,10 @@ from cross_decoding.cross_decoding import get_accuracy
 def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')
     parser.add_argument('--model_type', type=str, default='LDA', help='Model type. Can be either LDA or RidgeClassifier.')
-    parser.add_argument('--n_jobs', type=int, default=1, help='Number of cores to use.')
+    parser.add_argument('--n_jobs', type=int, default=4, help='Number of cores to use.')
     parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
     parser.add_argument('--alpha', type=str, default='auto', help='Regularization parameter. Can be either auto or float.')
+    parser.add_argument('--data_subset', type=str, default='all', help='Data subset to be used. Can be either all, memory or visual.')
 
     args = parser.parse_args()
 
@@ -129,6 +130,13 @@ def main():
 
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
     
+    if args.data_subset == 'all':
+        sessions = sessions
+    elif args.data_subset == 'memory':
+        sessions = sessions[7:]
+    elif args.data_subset == 'visual':
+        sessions = sessions[:7]
+    
     # get triggers for equal number of trials per condition (27 animate and 27 inanimate)
     triggers = get_triggers_equal()
 
@@ -147,9 +155,6 @@ def main():
     # Make sure all splits have the same number of trials
     Xs, ys = equalise_trials(Xs, ys)
 
-    for y in ys:
-        print(y.shape)
-
     # preparing the decoder
     decoder = Decoder(classification=True, ncv=args.ncv, alpha=args.alpha, model_type=args.model_type, get_tgm = True, verbose=False)
 
@@ -157,7 +162,7 @@ def main():
     accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
 
     # save accuracies
-    out_path = path.parent / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}.npy"
+    out_path = path.parent / "accuracies_within" / f"{args.model_type}_{args.alpha}_{args.ncv}_{args.data_subset}.npy"
         
     # ensure accuracy directory exists
     if not out_path.parent.exists():
