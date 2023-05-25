@@ -4,6 +4,7 @@ This folder holds the subfolders for the different decoding analyses. The follow
 |:-----------|:------------
 | condition | Decoding the task condition (memory vs. visual) 
 | cross_decoding | Decoding animacy training and testing on all pairs of sessions
+| cross_bins | mimicking the cross decoding analysis but instead of training on all pairs of sessions, training on all pairs of bins (each session is split into 11 bins)
 | ica | Testing the effect of ICA on decoding
 
 ## Files in the decoding directory
