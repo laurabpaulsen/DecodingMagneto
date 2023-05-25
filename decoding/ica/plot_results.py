@@ -12,7 +12,7 @@ alpha = 0.001
 
 
 # set parameters for all plots
-plt.rcParams['font.family'] = 'Sans serif'
+plt.rcParams['font.family'] = 'Sans-serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
@@ -38,7 +38,7 @@ def session_plots_individual(accuracies: dict, alpha: float = 0.05, n_trials: in
         Number of trials in the session.
     """
     for f, acc in accuracies.items():
-        plt = plot.plot_tgm_fig(acc, vmin=20, vmax=80, chance_level=chance_level(588, alpha = alpha, p = 0.5))
+        plt = plot.plot_tgm_fig(acc, vmin=20, vmax=80, chance_level=chance_level(n_trials, alpha = alpha, p = 0.5))
         plt.tight_layout()
 
         out_path = os.path.join('plots', f'tgm_{f}.png')
@@ -68,13 +68,13 @@ def main_plot_generator():
     # with no_ica
     no_ica = np.array([acc for f, acc in accuracies.items() if 'no_ica' in f])
     no_ica = np.mean(no_ica, axis=0)
-    ax[0] = plot.plot_tgm_ax(no_ica, ax[0], vmin=20, vmax=80, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
+    ax[0] = plot.plot_tgm_ax(no_ica, ax[0], vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
     ax[0].set_title('No ICA'.upper())
 
     # with ica
     ica = np.array([acc for f, acc in accuracies.items() if not 'no_ica' in f])
     ica = np.mean(ica, axis=0)
-    ax[1] = plot.plot_tgm_ax(ica, ax[1], vmin=20, vmax=80, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
+    ax[1] = plot.plot_tgm_ax(ica, ax[1], vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5))
     ax[1].set_title('ICA'.upper())  
     
     # add subplot for colorbar
