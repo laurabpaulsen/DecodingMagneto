@@ -88,5 +88,5 @@ if __name__ in "__main__":
 
         t, p = ttest_1samp(angles, 0)
         print(cond)
-        print(f"Mean angle: {np.mean(angles):.3f}, p-value: {p:.3f}")
+        print(f"Mean angle: {np.mean(angles):.3f}, SD: {np.std(angles):.3f}, p-value: {p:.3f}")
 
