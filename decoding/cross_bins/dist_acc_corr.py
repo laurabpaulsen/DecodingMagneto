@@ -98,7 +98,7 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
     gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
     fig, axes = plt.subplots(3, 2, figsize=(10, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
-    bin_range = (-0.75, 0.75)
+    bin_range = (-0.4, 0.4)
 
     bins = np.linspace(bin_range[0], bin_range[1], 40)
 
