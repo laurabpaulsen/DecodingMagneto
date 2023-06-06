@@ -102,8 +102,8 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
 
     bins = np.linspace(bin_range[0], bin_range[1], 40)
 
-    for i, acc in enumerate([vis_acc, mem_acc, acc]):
-        dist = get_distance_matrix(order)
+    for i, acc in enumerate([vis_acc, mem_acc, all_acc]):
+        dist = get_distance_matrix(range(acc.shape[0]))
         ax_hist = axes[i, 1]
         ax_corr = axes[i, 0]
 
@@ -157,14 +157,14 @@ def main():
     path = Path(__file__)
 
     # load accuracies
-    acc_all = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_all.npy", allow_pickle=True)
-    acc_vis = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_visual.npy", allow_pickle=True)
-    acc_mem = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_memory.npy", allow_pickle=True)
+    acc_all = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_all_11.npy", allow_pickle=True)
+    acc_vis = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_visual_11.npy", allow_pickle=True)
+    acc_mem = np.load(path.parents[0] / "accuracies" / f"LDA_auto_10_memory_11.npy", allow_pickle=True)
     
     plot_path = path.parents[0] / "plots" 
 
     # plot
-    plot_corr_hist(vacc_vis, acc_mem, acc_all, save_path=plot_path / "corr_acc_dist.png")
+    plot_corr_hist(acc_vis, acc_mem, acc_all, save_path=plot_path / "corr_acc_dist_bins.png")
 
         
 
