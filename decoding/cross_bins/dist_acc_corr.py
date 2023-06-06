@@ -148,7 +148,7 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
     
 
     # share title between columns
-    axes[0, 0].set_title("bins".upper())
+    #axes[0, 0].set_title("bins".upper())
 
     if save_path is not None:
         plt.savefig(save_path )
