@@ -35,6 +35,7 @@ def parse_args():
     parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
     parser.add_argument('--alpha', type=str, default='auto', help='Regularization parameter. Can be either auto or float.')
     parser.add_argument('--data_subset', type=str, default='all', help='Data subset to be used. Can be either all, memory or visual.')
+    parser.add_argument('--n_splits', type=int, default=11, help='Number of splits to be used.')
 
     args = parser.parse_args()
 
@@ -144,9 +145,9 @@ def main():
     # preparing the data for decoding
     for i, session_list in enumerate(sessions):
         if i == 0:
-            Xs, ys = prep_data_split(session_list, triggers, n_splits=11) 
+            Xs, ys = prep_data_split(session_list, triggers, n_splits=args.n_splits) 
         else:
-            Xs_tmp, ys_tmp = prep_data_split(session_list, triggers, n_splits=11)
+            Xs_tmp, ys_tmp = prep_data_split(session_list, triggers, n_splits=args.n_splits)
             
             # loop over splits
             for j, (X, y) in enumerate(zip(Xs_tmp, ys_tmp)):
@@ -163,7 +164,7 @@ def main():
     accuracies = get_accuracy_session(Xs, ys, decoder, n_jobs=args.n_jobs)
 
     # save accuracies
-    out_path = path.parent / "accuracies" / f"{args.model_type}_{args.alpha}_{args.ncv}_{args.data_subset}.npy"
+    out_path = path.parent / "accuracies" / f"{args.model_type}_{args.alpha}_{args.ncv}_{args.data_subset}_{args.n_splits}.npy"
         
     # ensure accuracy directory exists
     if not out_path.parent.exists():
