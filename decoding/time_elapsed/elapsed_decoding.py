@@ -13,9 +13,10 @@ import json
 # local imports
 import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
+
 from utils.data.concatenate import read_and_concate_sessions
-from utils.data.triggers import get_triggers_equal, balance_class_weights
-from utils.data.prep_data import equalise_trials
+from utils.data.triggers import balance_class_weights
+from utils.analysis.decoder import Decoder
 
 
 def parse_args():
@@ -26,6 +27,9 @@ def parse_args():
     parser.add_argument('--within', action='store_true', help='Indicates whether to decode time elapsed within session or between sessions.')
     parser.add_argument('--trial_type', type=str, default='animate', help='Trial type. Can be either animate or inanimate.')
     parser.add_argument('--task', type=str, default='combined', help='Task. Can be either combined, visual or memory.')
+    parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
+    parser.add_argument('--model_type', type=str, default='LDA', help='Model type. Can be either LDA or RidgeClassifier.')
+
     args = parser.parse_args()
     
     return args
@@ -117,24 +121,46 @@ if __name__ == '__main__':
     # defining paths
     path = Path(__file__)
     output_path = path / "accuracies" / f'{args.trial_type}_{args.task}_within.npy' if args.within else f'{args.trial_type}_{args.task}_between.npy'
-
+    print(output_path)
+    
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
     
     # get triggers for the given trial type
     triggers = get_triggers(args.trial_type)
 
+    decoder = Decoder(args.model_type, args.ncv)
 
-    if args.within:
-        accuracies = np.zeros((len(sessions), 2)) # 2 for the two tasks
+    if args.within: # within session decoding
+        # accuracies array, dims = (n_sessions, timepoints, timepoints)
+        accuracies = np.zeros((len(sessions), 250, 250), dtype=float)
 
         # loop over sessions
         for i, session in enumerate(sessions):
-            # load data
-            Xs, ys = prepare_within_data(session, triggers)
+            # load and prepare data
+            X, y = prepare_within_data(session, triggers)
+        
+            # run decoding
+            accuracies[i, :, :] = decoder.run_decoding(X, y)
+        
+
+    elif not args.within: # between session decoding
+
+        tmp_sessions = sessions.copy()
+
+        # only use the subset of sessions that are relevant for the given task
+        if args.task == 'visual':
+            tmp_sessions = tmp_sessions[:7]
+        
+        elif args.task == 'memory':
+            tmp_sessions = tmp_sessions[7:]
+
+        # loop over sessions
+        X, y = prepare_between_data(tmp_sessions, triggers)
+
+        # run decoding
+        accuracies = decoder.run_decoding(X, y)
 
 
-    elif not args.within:
-        # between session decoding
 
-        # remember to use subsets of sessions for the different tasks
-        pass
+    # save accuracies
+    np.save(output_path, accuracies)
