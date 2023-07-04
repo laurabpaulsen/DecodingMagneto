@@ -35,31 +35,8 @@ def fit_ridge_clf(X, y, alphas = [1e-3, 1e-2, 1e-1, 1], ncv = 10):
 
     return clf
 
-def test_ridge_clf(clf, X, y):
-    """
-    Tests the ridge classifier on the data.
-    
-    Parameters
-    ----------
-    clf : sklearn.linear_model.Ridge
-        Fitted ridge classifier.
-    X : np.ndarray
-        Data matrix.
-    y : np.ndarray
-        Target vector.
-    
-    Returns
-    -------
-    score : float
-        Mean squared error.
-    """
 
-    # get the score
-    score = clf.score(X, y)
-
-    return score
-
-def tgm_ridge_scores(X, y, stratify, alphas = [1e-17, 1e-20, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1], ncv = 10):
+def tgm_ridge_scores(X, y, stratify, alphas = [1e-25, 1e-24, 1e-23, 1e-22, 1e-21, 1e-20, 1e-19, 1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1], ncv = 10):
     """
     Uses ridge regression to create a temporal generalisation matrix of scores. 
 
