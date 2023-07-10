@@ -29,7 +29,7 @@ def plot_squared_error_tgm(tgm, savepath:Path = None):
     fig, ax = plt.subplots(1, 1, figsize=(7, 7))
 
     # plot the results
-    im = ax.imshow(tgm, origin='lower', cmap="RdBu")
+    im = ax.imshow(tgm, origin='lower', cmap="autumn_r")
 
     # add colorbar
     cbar = fig.colorbar(im, ax=ax, shrink=0.8)
@@ -43,15 +43,18 @@ def plot_squared_error_tgm(tgm, savepath:Path = None):
     if savepath:
         plt.savefig(savepath)
 
-    
-
 
 if __name__ == "__main__":
     path = Path(__file__)
 
 
     ### PLOTS OF PREDICTING THE SESSION NUMBER ###
-    tgm_files = ['animate_combined_predict_session_number.npy', 'inanimate_combined_predict_session_number.npy', 'animate_memory_predict_session_number.npy', 'inanimate_memory_predict_session_number.npy', 'animate_visual_predict_session_number.npy', 'inanimate_visual_predict_session_number.npy']
+    tgm_files = ['animate_combined_predict_session_number.npy', 'animate_combined_predict_session_day.npy', 
+                 'inanimate_combined_predict_session_number.npy', 'inanimate_combined_predict_session_day.npy',
+                 'animate_memory_predict_session_number.npy', 'animate_memory_predict_session_day.npy',
+                 'inanimate_memory_predict_session_number.npy', 'inanimate_memory_predict_session_day.npy',
+                 'animate_visual_predict_session_number.npy', 'animate_visual_predict_session_day.npy',
+                 'inanimate_visual_predict_session_number.npy', 'inanimate_visual_predict_session_day.npy']
 
     for file in tgm_files:
         try:
