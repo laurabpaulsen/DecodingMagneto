@@ -64,6 +64,12 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-25, 1e-24, 1e-23, 1e-22, 1e-21
     # create the temporal generalisation matrix
     tgm = np.zeros((n_timepoints, n_timepoints, len(np.unique(stratify))))
 
+    # shuffle the data
+    idx = np.random.permutation(X.shape[1])
+    X = X[:, idx, :]
+    y = y[idx]
+    stratify = stratify[idx]
+
     # loop over the timepoints
     for i in tqdm(range(n_timepoints)):
         # loop over stratification groups
