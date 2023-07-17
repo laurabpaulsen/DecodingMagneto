@@ -11,7 +11,7 @@ import json
 import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 from utils.data.concatenate import read_and_concate_sessions
-from utils.data.triggers import balance_class_weights
+from utils.data.triggers import balance_class_weights_multiple
 from ridge_fns import tgm_ridge_scores
 
 
@@ -59,7 +59,7 @@ def prepare_data(session_list:list, triggers:list):
             ys = np.concatenate((ys, y), axis=0)
 
     # balance class weights
-    X, y, _ = balance_class_weights(Xs, ys)
+    X, y = balance_class_weights_multiple(Xs, ys)
 
     return X, y
 
