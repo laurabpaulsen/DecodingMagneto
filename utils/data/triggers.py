@@ -89,4 +89,35 @@ def balance_class_weights(X, y, verbose = True):
     
     return X_equal, y_equal, remove_ind
 
+def balance_class_weights_multiple(X, y):
+    """
+    Balances the class weight by removing trials so each class has the same number of trials as the class with the least trials.
 
+    Parameters
+    ----------
+    X : array
+        Data array with shape (n_channels, n_trials, n_times)
+    y : array
+        Array with shape (n_trials, ) containing several classes
+
+    Returns
+    -------
+    X_equal : array
+        Data array with shape (n_channels, n_trials, n_times) with equal number of trials for each class
+    y_equal : array
+        Array with shape (n_trials, ) containing classes with equal number of trials for each class
+
+    """
+    keys, counts = np.unique(y, return_counts = True)
+
+    keep_inds = []
+
+    for key in keys:
+        index = np.where(np.array(y) == key)
+        random_choices = np.random.choice(index[0], size = counts.min(), replace=False)
+        keep_inds.extend(random_choices)
+    
+    X_equal = X[:, keep_inds, :]
+    y_equal = y[keep_inds]
+
+    return X_equal, y_equal
