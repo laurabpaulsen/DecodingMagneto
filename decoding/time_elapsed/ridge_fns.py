@@ -1,12 +1,12 @@
 """
-Functions for ridge regression
+Functions for ridge regression used in predict_session_day.py, predict_trial_number.py, and predict_session_number.py.
 """
-import argparse as ap
 import numpy as np
 from sklearn.linear_model import RidgeCV
 from tqdm import tqdm
 
-def fit_ridge_clf(X, y, alphas = [1e-3, 1e-2, 1e-1, 1], ncv = 10):
+
+def fit_ridge_clf(X, y, alphas:list, ncv = 10):
     """
     Fits the ridge classifier to the data.
     
@@ -35,7 +35,6 @@ def fit_ridge_clf(X, y, alphas = [1e-3, 1e-2, 1e-1, 1], ncv = 10):
 
     return clf
 
-
 def tgm_ridge_scores(X, y, stratify, alphas = [1e-25, 1e-24, 1e-23, 1e-22, 1e-21, 1e-20, 1e-19, 1e-18, 1e-17, 1e-16, 1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-9, 1e-8, 1e-7, 1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1], ncv = 10):
     """
     Uses ridge regression to create a temporal generalisation matrix of scores. 
@@ -56,9 +55,9 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-25, 1e-24, 1e-23, 1e-22, 1e-21
     Returns
     -------
     tgm : np.ndarray
-        Temporal generalisation matrix of scores, shape (n_timepoints, n_timepoints).
-    """
+        Temporal generalisation matrix of mean errors, shape (n_timepoints, n_timepoints, n_stratify).
 
+    """
     # get the number of timepoints
     n_timepoints = X.shape[0]
 
@@ -83,15 +82,12 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-25, 1e-24, 1e-23, 1e-22, 1e-21
             # fit the classifier
             clf = fit_ridge_clf(X_train, y_train, alphas = alphas, ncv = ncv)
 
-            # print the best alpha
-            print("best alpha", clf.alpha_)
-
             # test the classifier on all timepoint
             for j in range(n_timepoints):
                 # get the testing data
                 X_test_j = X_test[j, :, :]
 
-                # predict the session number
+                # predict the labels
                 pred = clf.predict(X_test_j)
 
                 mean_error = np.mean(np.abs(pred - y_test))
