@@ -34,9 +34,9 @@ def prepare_data(session_list:list, triggers:list):
 
     Returns
     -------
-    X : np.array
+    Xs : np.array
         Data array.
-    y : np.array
+    ys : np.array
         Label array
     sesh_inds : np.array
         Array of session indices.
@@ -49,17 +49,20 @@ def prepare_data(session_list:list, triggers:list):
         # replace all values of y with the trial number
         y = np.array([i for i in range(len(y))])
 
+        # create an array of session indices
+        sesh_ind = np.array([i for _ in range(len(y))])
+
         if i == 0:
             Xs = X
             ys = y
-            sesh_inds = np.array([i for _ in range(len(y))])
+            sesh_inds = sesh_ind
         else:
             Xs = np.concatenate((Xs, X), axis=1)
             ys = np.concatenate((ys, y), axis=0)
-            sesh_inds = np.concatenate((sesh_inds, np.array([i for _ in range(len(y))])), axis=0)
+            sesh_inds = np.concatenate((sesh_inds, sesh_ind), axis=0)
 
-    
-    return X, y, sesh_inds
+        
+    return Xs, ys, sesh_inds
 
 
 def get_triggers(trial_type:str = "animate"):
@@ -81,7 +84,6 @@ if __name__ == '__main__':
     output_path = path.parent / "results" / f'{args.trial_type}_{args.task}_predict_session_day.npy'
     # ensure that the results directory exists
     output_path.parents[0].mkdir(parents=True, exist_ok=True)
-    print(output_path)
     
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15'] ,['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38']]
     #  change sessions depending on the task
@@ -94,7 +96,7 @@ if __name__ == '__main__':
 
 
     # prepare the data
-    X, y, sesh_inds = prepare_data(sessions, triggers) # y is the session number
+    X, y, sesh_inds = prepare_data(sessions, triggers)
 
     # in this case the session number is the stratification variable
     tgm = tgm_ridge_scores(X, y, stratify=sesh_inds, ncv=args.ncv)
