@@ -24,20 +24,154 @@ plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
 
-def plot_squared_error_tgm_ax(tgm, ax):
+def plot_tgm_ax(tgm, ax, cbar_label='MSE'):
 
     # plot the results
     im = ax.imshow(tgm, origin='lower', cmap="autumn_r")
 
     # add colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar = ax.figure.colorbar(im, ax=ax, pad=0.01, shrink=0.8)
+
+    # remove scientific notation from colorbar
+    # cbar.ax.ticklabel_format(style='plain')
+    
     # add title to colorbar
-    cbar.set_label('MSE', size=10)
+    cbar.set_label(cbar_label, size=10)
 
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
     ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
 
     return ax
+
+def determine_row_col(params):
+    if params['task'] == 'combined':
+        row = 0
+    elif params['task'] == 'memory':
+        row = 1
+    elif params['task'] == 'visual':
+        row = 2
+    
+    if params['predict'] == 'session number':
+        col = 0
+    elif params['predict'] == 'session day':
+        col = 1
+    elif params['predict'] == 'trial number':
+        col = 2
+    
+    return row, col
+
+
+def plot_tgm_correlations(tgm_dict):
+    for trial_type in ['animate', 'inanimate']:
+        # figure with subplots
+        fig, axs = plt.subplots(3, 3, figsize=(12, 9))
+        
+        for i, (file, params) in enumerate(tgm_dict.items()):
+            if params['trial_type'] == trial_type:
+                try:
+                    predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
+                    true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
+                    if params['trial_type'] == trial_type:
+                        # get the correlation between the predicted and true values for each timepoint
+                        cor_tgm = np.zeros((250, 250))
+                        for i in range(250):
+                            for j in range(250):
+                                # calculate the correlation between the predicted and true values across all stratification groups and trials
+                                tmp_predicted = predicted[i, j, :, :].flatten()
+                                tmp_true = true[i, j, :, :].flatten()
+
+                                # remove nans
+                                tmp_predicted = tmp_predicted[~np.isnan(tmp_predicted)]
+                                tmp_true = tmp_true[~np.isnan(tmp_predicted)]
+
+                                # calculate the correlation
+                                cor_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
+                        
+
+                        # based on the params determine the row and column of the subplot
+                        row, col = determine_row_col(params)
+                    
+                        # plot the results
+                        plot_tgm_ax(cor_tgm, axs[row, col], cbar_label='Correlation')
+
+                except FileNotFoundError:
+                    print(f'Could not plot {file}')
+                    pass
+
+        # add titles to the columns
+        axs[0, 0].set_title('Session Number'.upper())
+        axs[0, 1].set_title('Session Day'.upper())
+        axs[0, 2].set_title('Trial Number'.upper())
+
+        # add titles to the rows
+        axs[0, 0].set_ylabel('Combined'.upper())
+        axs[1, 0].set_ylabel('Memory'.upper())
+        axs[2, 0].set_ylabel('Visual'.upper())
+
+        # add a title to the figure
+        fig.suptitle(f'{trial_type.capitalize()} TGMs'.upper())
+
+        # tight layout
+        fig.tight_layout()
+        
+        # save the figure
+        plt.savefig(path.parent / 'plots' /f'time_elapsed_tgm_{trial_type}_corr.png', bbox_inches='tight')
+
+def plot_tgm_MSE(tgm_dict):
+    for trial_type in ['animate', 'inanimate']:
+
+        fig, axs = plt.subplots(3, 3, figsize=(12, 9))
+
+        for i, (file, params) in enumerate(tgm_dict.items()):
+            if params['trial_type'] == trial_type:
+                try:
+                    predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
+                    true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
+                        
+                    # get the MSE between the predicted and true values for each timepoint
+                    MSE_tgm = np.zeros((250, 250))
+                    for i in range(250):
+                        for j in range(250):
+                            # calculate the correlation between the predicted and true values across all stratification groups and trials
+                            tmp_predicted = predicted[i, j, :, :].flatten()
+                            tmp_true = true[i, j, :, :].flatten()
+
+                            # remove zeros CHECK THIS!!!!!
+                            tmp_predicted = tmp_predicted[np.argwhere(tmp_predicted != 0)]
+                            tmp_true = tmp_true[np.argwhere(tmp_predicted != 0)]
+
+                            # calculate the mean squared error
+                            MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
+                            
+
+                    # based on the params determine the row and column of the subplot
+                    row, col = determine_row_col(params)
+                    
+                    # plot the results
+                    plot_tgm_ax(MSE_tgm, axs[row, col])
+
+                except FileNotFoundError:
+                    print(f'Could not plot {file}')
+                    pass
+
+        # add titles to the columns
+        axs[0, 0].set_title('Session Number'.upper())
+        axs[0, 1].set_title('Session Day'.upper())
+        axs[0, 2].set_title('Trial Number'.upper())
+
+        # add titles to the rows
+        axs[0, 0].set_ylabel('Combined'.upper())
+        axs[1, 0].set_ylabel('Memory'.upper())
+        axs[2, 0].set_ylabel('Visual'.upper())
+
+        # add a title to the figure
+        fig.suptitle(f'{trial_type.capitalize()} TGMs'.upper())
+
+        # tight layout
+        fig.tight_layout()
+        
+        # save the figure
+        plt.savefig(path.parent / 'plots' /f'time_elapsed_tgm_{trial_type}_mse.png', bbox_inches='tight')
 
 
 
@@ -56,55 +190,14 @@ if __name__ == "__main__":
         "animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
         "animate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "animate"},
         "inanimate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "inanimate"},
-        "inanimate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "inanimate"}
+        "inanimate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "inanimate"},
+        "animate_combined_predict_trial_number.npy": {"predict": "trial number", "task": "combined", "trial_type": "animate"},
+        "inanimate_combined_predict_trial_number.npy": {"predict": "trial number", "task": "combined", "trial_type": "inanimate"},
+        "animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
+        "inanimate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "inanimate"},
+        "animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
+        "inanimate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "inanimate"},
     }
 
-    for trial_type in ['animate', 'inanimate']:
-        # figure with subplots
-        fig, axs = plt.subplots(3, 3, figsize=(12, 9), sharex=True, sharey=True)
-        
-        for i, (file, params) in enumerate(tgm_files.items()):
-            if params['trial_type'] == trial_type:
-                try:
-                    tgm = np.load(path.parent / 'results' / file, allow_pickle=True)
-                    
-                    # calculate the mean squared error across the 2 axis (contains the error)
-                    tgm = np.mean(np.square(tgm), axis=2)
-
-                    # based on the params determine the row and column of the subplot
-                    if params['task'] == 'combined':
-                        row = 0
-                    elif params['task'] == 'memory':
-                        row = 1
-                    elif params['task'] == 'visual':
-                        row = 2
-                    
-                    if params['predict'] == 'session number':
-                        col = 0
-                    elif params['predict'] == 'session day':
-                        col = 1
-                    elif params['predict'] == 'trial number':
-                        col = 2
-                
-                    # plot the results
-                    plot_squared_error_tgm_ax(tgm, axs[row, col])
-
-                except:
-                    print(f'Could not plot {file}')
-                    pass
-
-        # add titles to the columns
-        axs[0, 0].set_title('Session Number'.upper())
-        axs[0, 1].set_title('Session Day'.upper())
-        axs[0, 2].set_title('Trial Number'.upper())
-
-        # add titles to the rows
-        axs[0, 0].set_ylabel('Combined'.upper())
-        axs[1, 0].set_ylabel('Memory'.upper())
-        axs[2, 0].set_ylabel('Visual'.upper())
-
-        # add a title to the figure
-        fig.suptitle(f'{trial_type.capitalize()} TGMs'.upper())
-        
-        # save the figure
-        plt.savefig(path.parent / 'plots' /f'time_elapsed_tgm_{trial_type}.png', bbox_inches='tight')
+    plot_tgm_correlations(tgm_files)
+    plot_tgm_MSE(tgm_files)

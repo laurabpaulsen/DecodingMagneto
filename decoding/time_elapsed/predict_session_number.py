@@ -79,10 +79,10 @@ if __name__ == '__main__':
 
     # defining paths
     path = Path(__file__)
-    output_path = path.parent / "results" / f'{args.trial_type}_{args.task}_predict_session_number.npy'
+    output_path_pred = path.parent / "results" / f'{args.trial_type}_{args.task}_predict_session_number.npy'
+    output_path_true = path.parent / "results" / f'{args.trial_type}_{args.task}_true_session_number.npy'
     # ensure that the results directory exists
-    output_path.parents[0].mkdir(parents=True, exist_ok=True)
-    print(output_path)
+    output_path_pred.parents[0].mkdir(parents=True, exist_ok=True)
     
     sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15'] ,['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38']]
     
@@ -100,7 +100,8 @@ if __name__ == '__main__':
 
     # in this case the session number is both y and the stratify variable
     # as we want to predict the session number, but also ensure that no signal leakage occurs
-    tgm = tgm_ridge_scores(X, y, stratify=y, ncv=args.ncv)
+    pred, true = tgm_ridge_scores(X, y, stratify=y, ncv=args.ncv)
 
     # save the scores
-    np.save(output_path, tgm)
+    np.save(output_path_pred, pred)
+    np.save(output_path_true, true)
