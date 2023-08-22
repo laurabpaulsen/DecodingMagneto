@@ -71,6 +71,7 @@ def plot_tgm_correlations(tgm_dict):
                 try:
                     predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
                     true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
+                    print(f'Plotting {file}, shape: {predicted.shape}')
                     if params['trial_type'] == trial_type:
                         # get the correlation between the predicted and true values for each timepoint
                         cor_tgm = np.zeros((250, 250))
