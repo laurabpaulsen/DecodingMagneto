@@ -32,10 +32,8 @@ def plot_tgm_ax(tgm, ax, cbar_label='MSE'):
     # plot the results
     im = ax.imshow(tgm, origin='lower', cmap="autumn_r")
 
-    #fmt = lambda x, pos: '{:.4}'.format(x)
-
     # add colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, pad=0.01, shrink=0.8)#, format=FuncFormatter(fmt))
+    cbar = ax.figure.colorbar(im, ax=ax, pad=0.01, shrink=0.8)
     
     cbar.ax.set_ylabel(cbar_label, rotation=-90, va="bottom", size=10)
     cbar.ax.ticklabel_format(useOffset=False, style = 'plain')
