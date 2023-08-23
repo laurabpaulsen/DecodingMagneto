@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+from matplotlib.ticker import FuncFormatter
+
+
 # local imports
 import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
@@ -29,14 +32,17 @@ def plot_tgm_ax(tgm, ax, cbar_label='MSE'):
     # plot the results
     im = ax.imshow(tgm, origin='lower', cmap="autumn_r")
 
-    # add colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, pad=0.01, shrink=0.8)
+    #fmt = lambda x, pos: '{:.4}'.format(x)
 
-    # remove scientific notation from colorbar
-    # cbar.ax.ticklabel_format(style='plain')
+    # add colorbar
+    cbar = ax.figure.colorbar(im, ax=ax, pad=0.01, shrink=0.8)#, format=FuncFormatter(fmt))
     
-    # add title to colorbar
-    cbar.set_label(cbar_label, size=10)
+    cbar.ax.set_ylabel(cbar_label, rotation=-90, va="bottom", size=10)
+    cbar.ax.ticklabel_format(useOffset=False, style = 'plain')
+
+
+    # add label with mean value 
+    ax.text(0.5, 1.05, f'Mean: {np.mean(tgm):.2f}', transform=ax.transAxes, ha='center', va='bottom', size=10)
 
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
     ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
@@ -71,7 +77,7 @@ def plot_tgm_correlations(tgm_dict):
                 try:
                     predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
                     true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
-                    print(f'Plotting {file}, shape: {predicted.shape}')
+
                     if params['trial_type'] == trial_type:
                         # get the correlation between the predicted and true values for each timepoint
                         cor_tgm = np.zeros((250, 250))
@@ -143,13 +149,14 @@ def plot_tgm_MSE(tgm_dict):
 
                             # calculate the mean squared error
                             MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
-                            
+
 
                     # based on the params determine the row and column of the subplot
                     row, col = determine_row_col(params)
                     
                     # plot the results
                     plot_tgm_ax(MSE_tgm, axs[row, col])
+
 
                 except FileNotFoundError:
                     print(f'Could not plot {file}')
@@ -200,5 +207,8 @@ if __name__ == "__main__":
         "inanimate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "inanimate"},
     }
 
-    plot_tgm_correlations(tgm_files)
+    # plot_tgm_correlations(tgm_files)
     plot_tgm_MSE(tgm_files)
+
+    # plot correlation between predicted and true values
+    plot_tgm_correlations(tgm_files)
