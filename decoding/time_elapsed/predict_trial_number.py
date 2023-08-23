@@ -8,7 +8,7 @@ import json
 import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 from utils.data.concatenate import read_and_concate_sessions
-from ridge_fns import tgm_ridge_scores
+from ridge_fns import tgm_ridge_scores, get_logger
 
 
 def parse_args():
@@ -83,6 +83,7 @@ if __name__ == '__main__':
     path = Path(__file__)
     output_path_pred = path.parent / "results" / f'{args.trial_type}_{args.task}_predict_trial_number.npy'
     output_path_true = path.parent / "results" / f'{args.trial_type}_{args.task}_true_trial_number.npy'
+    logger_path = path.parent / 'logs' / f'{args.trial_type}_{args.task}_predict_trial_number.log'
     # ensure that the results directory exists
     output_path_pred.parents[0].mkdir(parents=True, exist_ok=True)
     
@@ -99,8 +100,11 @@ if __name__ == '__main__':
     # prepare the data
     X, y, sesh_inds = prepare_data(sessions, triggers)
 
+    # get the logger
+    logger = get_logger(logger_path)
+
     # in this case the session number is the stratification variable
-    pred, true = tgm_ridge_scores(X, y, stratify=sesh_inds, ncv=args.ncv)
+    pred, true = tgm_ridge_scores(X, y, stratify=sesh_inds, ncv=args.ncv, logger=logger)
 
     np.save(output_path_pred, pred)
     np.save(output_path_true, true)

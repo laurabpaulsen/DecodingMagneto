@@ -5,6 +5,24 @@ import numpy as np
 from sklearn.linear_model import RidgeCV
 from tqdm import tqdm
 
+import logging
+
+def get_logger(filename):
+    logger = logging.getLogger()  # Get a logger instance
+    logger.setLevel(logging.INFO)  # Set logging level
+
+    # Create a file handler
+    file_handler = logging.FileHandler(filename, mode='w')
+    formatter = logging.Formatter('%(asctime)s %(message)s')
+    file_handler.setFormatter(formatter)
+
+    # Add the file handler to the logger
+    logger.addHandler(file_handler)
+
+    return logger
+ 
+
+
 
 def fit_ridge_clf(X, y, alphas:list, ncv = 10):
     """
@@ -35,7 +53,7 @@ def fit_ridge_clf(X, y, alphas:list, ncv = 10):
 
     return clf
 
-def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100], ncv = 10):
+def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100], ncv = 10, logger = None):
     """
     Fits the ridge classifier to the data and applies it to all timepoints.
 
@@ -79,6 +97,7 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-
     y = y[idx]
     stratify = stratify[idx]
 
+
     # loop over the timepoints
     for i in tqdm(range(n_timepoints)):
         # loop over stratification groups
@@ -103,5 +122,11 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-
                 # store the predictions and true values
                 predictions[i, j, s, :pred.shape[0]] = pred
                 true_values[i, j, s, :pred.shape[0]] = y_test
-    
+
+                # log if all predictions made using model trained on time point i are the same for stratification group s (i.e. no variance in predictions)
+                if logger is not None:
+                    if np.all(pred == pred[0]):
+                        logger.info(f'All predictions for train timepoint {i} and test timepoint {j} (stratgroup {s}) are the same.')
+
+                
     return predictions, true_values
