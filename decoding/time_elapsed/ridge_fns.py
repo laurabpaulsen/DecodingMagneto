@@ -3,6 +3,7 @@ Functions for ridge regression used in predict_session_day.py, predict_trial_num
 """
 import numpy as np
 from sklearn.linear_model import RidgeCV
+from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 
 import logging
@@ -53,7 +54,7 @@ def fit_ridge_clf(X, y, alphas:list, ncv = 10):
 
     return clf
 
-def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100], ncv = 10, logger = None):
+def tgm_ridge_scores(X, y, stratify, alphas = np.logspace(0, 5, 10), ncv = 10, logger = None):
     """
     Fits the ridge classifier to the data and applies it to all timepoints.
 
@@ -91,6 +92,10 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-
     predictions = np.empty((n_timepoints, n_timepoints, n_stratification_groups, n_trials))
     true_values = np.empty((n_timepoints, n_timepoints, n_stratification_groups, n_trials))
 
+    # fill with nans
+    predictions[:] = np.nan
+    true_values[:] = np.nan
+
     # shuffle the data
     idx = np.random.permutation(X.shape[1])
     X = X[:, idx, :]
@@ -108,6 +113,16 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-
             X_test = X[:, stratify == strat, :]
             y_test = y[stratify == strat]
 
+            # convert all values to floats
+            X_train = X_train.astype(float)
+            y_train = y_train.astype(float)
+            X_test = X_test.astype(float)
+            y_test = y_test.astype(float)
+
+            # standardize the data
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+
             # fit the classifier
             clf = fit_ridge_clf(X_train, y_train, alphas = alphas, ncv = ncv)
 
@@ -115,6 +130,8 @@ def tgm_ridge_scores(X, y, stratify, alphas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-
             for j in range(n_timepoints):
                 # get the testing data
                 X_test_j = X_test[j, :, :]
+                # standardize the data
+                X_test_j = scaler.transform(X_test_j)
 
                 # predict the labels
                 pred = clf.predict(X_test_j)
