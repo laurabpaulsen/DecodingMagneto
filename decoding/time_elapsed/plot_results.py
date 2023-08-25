@@ -39,8 +39,6 @@ def plot_tgm_ax(tgm, ax, cbar_label='MSE'):
     cbar.ax.ticklabel_format(useOffset=False, style = 'plain')
 
 
-    # add label with mean value 
-    ax.text(0.5, 1.05, f'Mean: {np.mean(tgm):.2f}', transform=ax.transAxes, ha='center', va='bottom', size=10)
 
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
     ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
@@ -72,36 +70,32 @@ def plot_tgm_correlations(tgm_dict):
         
         for i, (file, params) in enumerate(tgm_dict.items()):
             if params['trial_type'] == trial_type:
-                try:
-                    predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
-                    true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
+                predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
+                true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
 
-                    if params['trial_type'] == trial_type:
-                        # get the correlation between the predicted and true values for each timepoint
-                        cor_tgm = np.zeros((250, 250))
-                        for i in range(250):
-                            for j in range(250):
-                                # calculate the correlation between the predicted and true values across all stratification groups and trials
-                                tmp_predicted = predicted[i, j, :, :].flatten()
-                                tmp_true = true[i, j, :, :].flatten()
+                if params['trial_type'] == trial_type:
+                    # get the correlation between the predicted and true values for each timepoint
+                    cor_tgm = np.zeros((250, 250))
+                    for i in range(250):
+                        for j in range(250):
+                            # take only the non-nan values
+                            tmp_predicted = predicted[i, j, :, :].flatten()
+                            tmp_true = true[i, j, :, :].flatten()
 
-                                # remove nans
-                                tmp_predicted = tmp_predicted[~np.isnan(tmp_predicted)]
-                                tmp_true = tmp_true[~np.isnan(tmp_predicted)]
+                            # remove nans
+                            tmp_predicted = tmp_predicted[~np.isnan(tmp_predicted)]
+                            tmp_true = tmp_true[~np.isnan(tmp_true)]
 
-                                # calculate the correlation
-                                cor_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
+                            # calculate the correlation
+                            cor_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
                         
 
-                        # based on the params determine the row and column of the subplot
-                        row, col = determine_row_col(params)
+                    # based on the params determine the row and column of the subplot
+                    row, col = determine_row_col(params)
                     
-                        # plot the results
-                        plot_tgm_ax(cor_tgm, axs[row, col], cbar_label='Correlation')
+                    # plot the results
+                    plot_tgm_ax(cor_tgm, axs[row, col], cbar_label='Correlation')
 
-                except FileNotFoundError:
-                    print(f'Could not plot {file}')
-                    pass
 
         # add titles to the columns
         axs[0, 0].set_title('Session Number'.upper())
@@ -129,36 +123,31 @@ def plot_tgm_MSE(tgm_dict):
 
         for i, (file, params) in enumerate(tgm_dict.items()):
             if params['trial_type'] == trial_type:
-                try:
-                    predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
-                    true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
+                predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
+                true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
                         
-                    # get the MSE between the predicted and true values for each timepoint
-                    MSE_tgm = np.zeros((250, 250))
-                    for i in range(250):
-                        for j in range(250):
-                            # calculate the correlation between the predicted and true values across all stratification groups and trials
-                            tmp_predicted = predicted[i, j, :, :].flatten()
-                            tmp_true = true[i, j, :, :].flatten()
+                # get the MSE between the predicted and true values for each timepoint
+                MSE_tgm = np.zeros((250, 250))
+                for i in range(250):
+                    for j in range(250):
+                        # calculate the MSE between the predicted and true values across all stratification groups and trials
+                        tmp_predicted = predicted[i, j, :, :].flatten()
+                        tmp_true = true[i, j, :, :].flatten()
 
-                            # remove zeros CHECK THIS!!!!!
-                            tmp_predicted = tmp_predicted[np.argwhere(tmp_predicted != 0)]
-                            tmp_true = tmp_true[np.argwhere(tmp_predicted != 0)]
+                        # remove nan values
+                        tmp_predicted = tmp_predicted[~np.isnan(tmp_predicted)]
+                        tmp_true = tmp_true[~np.isnan(tmp_true)]
 
-                            # calculate the mean squared error
-                            MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
+                        # calculate the mean squared error
+                        MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
 
 
-                    # based on the params determine the row and column of the subplot
-                    row, col = determine_row_col(params)
+                # based on the params determine the row and column of the subplot
+                row, col = determine_row_col(params)
                     
-                    # plot the results
-                    plot_tgm_ax(MSE_tgm, axs[row, col])
+                # plot the results
+                plot_tgm_ax(MSE_tgm, axs[row, col])
 
-
-                except FileNotFoundError:
-                    print(f'Could not plot {file}')
-                    pass
 
         # add titles to the columns
         axs[0, 0].set_title('Session Number'.upper())
