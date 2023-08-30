@@ -27,10 +27,14 @@ plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
 
-def plot_tgm_ax(tgm, ax, cbar_label='MSE'):
+def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None):
 
     # plot the results
-    im = ax.imshow(tgm, origin='lower', cmap="autumn_r")
+    if min_val is not None and max_val is not None:
+        im = ax.imshow(tgm, origin='lower', cmap="autumn_r", vmin=min_val, vmax=max_val)
+    else:
+
+        im = ax.imshow(tgm, origin='lower', cmap="autumn_r")
 
     # add colorbar
     cbar = ax.figure.colorbar(im, ax=ax, pad=0.01, shrink=0.8)
@@ -94,7 +98,7 @@ def plot_tgm_correlations(tgm_dict):
                     row, col = determine_row_col(params)
                     
                     # plot the results
-                    plot_tgm_ax(cor_tgm, axs[row, col], cbar_label='Correlation')
+                    plot_tgm_ax(cor_tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1)
 
 
         # add titles to the columns
