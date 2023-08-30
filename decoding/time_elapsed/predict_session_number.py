@@ -12,7 +12,7 @@ import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 from utils.data.concatenate import read_and_concate_sessions
 from utils.data.triggers import balance_class_weights_multiple
-from ridge_fns import tgm_ridge_scores, get_logger
+from ridge_fns import tgm_ridge_scores
 
 
 def parse_args():
@@ -99,12 +99,9 @@ if __name__ == '__main__':
     # prepare the data
     X, y = prepare_data(sessions, triggers) # y is the session number
 
-    # get the logger
-    logger = get_logger(logger_path)
-
     # in this case the session number is both y and the stratify variable
     # as we want to predict the session number, but also ensure that no signal leakage occurs
-    pred, true = tgm_ridge_scores(X, y, stratify=y, ncv=args.ncv, logger=logger)
+    pred, true = tgm_ridge_scores(X, y, stratify=y, ncv=args.ncv)
 
     # save the scores
     np.save(output_path_pred, pred)
