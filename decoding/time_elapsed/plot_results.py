@@ -66,6 +66,16 @@ def determine_row_col(params):
     
     return row, col
 
+def flatten_remove_nans(tgm):
+    # flatten the tgm
+    tgm = tgm.flatten()
+
+    # remove nans
+    tgm = tgm[~np.isnan(tgm)]
+
+    return tgm
+
+
 
 def plot_tgm_correlations(tgm_dict):
     for trial_type in ['animate', 'inanimate']:
@@ -82,13 +92,9 @@ def plot_tgm_correlations(tgm_dict):
                     cor_tgm = np.zeros((250, 250))
                     for i in range(250):
                         for j in range(250):
-                            # take only the non-nan values
-                            tmp_predicted = predicted[i, j, :, :].flatten()
-                            tmp_true = true[i, j, :, :].flatten()
-
-                            # remove nans
-                            tmp_predicted = tmp_predicted[~np.isnan(tmp_predicted)]
-                            tmp_true = tmp_true[~np.isnan(tmp_true)]
+                            # take only the non-nan values and flatten the array
+                            tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
+                            tmp_true = flatten_remove_nans(true[i, j, :, :])
 
                             # calculate the correlation
                             cor_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
@@ -134,13 +140,9 @@ def plot_tgm_MSE(tgm_dict):
                 MSE_tgm = np.zeros((250, 250))
                 for i in range(250):
                     for j in range(250):
-                        # calculate the MSE between the predicted and true values across all stratification groups and trials
-                        tmp_predicted = predicted[i, j, :, :].flatten()
-                        tmp_true = true[i, j, :, :].flatten()
-
-                        # remove nan values
-                        tmp_predicted = tmp_predicted[~np.isnan(tmp_predicted)]
-                        tmp_true = tmp_true[~np.isnan(tmp_true)]
+                        # take only the non-nan values and flatten the array
+                        tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
+                        tmp_true = flatten_remove_nans(true[i, j, :, :])
 
                         # calculate the mean squared error
                         MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
