@@ -70,6 +70,19 @@ def prep_x_y(acc, dist):
     
     return X, y
 
+def prep_x_y_cond(acc, dist):
+    # initialize lists
+    X = []
+    y = []
+
+    for i in range(dist.shape[0]):
+        for j in range(dist.shape[1]):
+            if i != j: # do not include within session decoding
+                X.append(np.diag(acc[i, j, :, :]))
+                y.append(dist[i, j])
+    
+    return X, y
+
 def get_corr_pval(X, y):
     # initialize lists
     corr = []
@@ -101,7 +114,6 @@ def plot_corr(ax, corr, pval):
 
 
 def plot_corr_hist(acc, save_path = None):
-           
     # only memory
     mem_indices = [4, 5, 6, 7]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
@@ -184,6 +196,60 @@ def plot_corr_hist(acc, save_path = None):
     if save_path is not None:
         plt.savefig(save_path )
 
+def plot_corr_hist_cond(acc, save_path = None):
+
+    # prep x and y
+    dist = get_distance_matrix([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0])
+
+    # get x and y
+    X, y = prep_x_y_cond(acc, dist)
+
+    # get correlation and p-values
+    corr, pval = get_corr_pval(X, y)
+
+
+    # test if mean of correlations is significantly different from 0
+    t, p = ttest_1samp(corr, 0)
+    
+    # set up figure
+    gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1], wspace=0.01, hspace=0.3)
+    fig, ax = plt.subplots(1, 2, figsize=(8, 4), dpi=300, gridspec_kw=gs_kw)
+
+    bin_range = (-0.75, 0.75)
+
+    bins = np.linspace(bin_range[0], bin_range[1], 40)
+
+    # plot correlation
+    ax[0].plot(corr)
+    # seconds on x axis
+    x_axis_seconds(ax[0])
+
+    # set limits
+    ax[0].set_xlim([0, 250])
+
+    # plot histogram of correlations
+    ax[1].hist(corr, bins = bins, color="lightblue", orientation="horizontal")
+    ax[1].set_axis_off()
+
+    # vertical line at mean
+    ax[1].axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
+
+    # add mean correlation and p-value
+    ax[1].text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax[1].transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+
+    # add title
+    ax[0].set_title("Correlation".upper())
+
+    # add y label
+    ax[0].set_ylabel("PEARSON'S R", fontsize=16)
+
+    # add x label
+    ax[0].set_xlabel("TIME (s)", fontsize=16)
+
+
+    if save_path is not None:
+        plt.savefig(save_path)
+
 
 def main():
     path = Path(__file__)
@@ -194,6 +260,8 @@ def main():
 
     # plot
     plot_corr_hist(acc, save_path=plot_path / "corr_acc_dist.png")
+
+    plot_corr_hist_cond(acc, save_path=plot_path / "corr_acc_dist_cond.png")
 
         
 
