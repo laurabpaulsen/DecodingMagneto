@@ -67,6 +67,9 @@ def prep_x_y(acc, dist):
             if dist[i,j] != 0: # do not include within session decoding
                 X.append(np.diag(acc[i, j, :, :]))
                 y.append(dist[i, j])
+
+    # min max normalize y between 0 and 1
+    #y = (y - np.min(y)) / (np.max(y) - np.min(y))
     
     return X, y
 
@@ -81,6 +84,8 @@ def prep_x_y_cond(acc, dist):
                 X.append(np.diag(acc[i, j, :, :]))
                 y.append(dist[i, j])
     
+    # min max normalize y between 0 and 1
+    #y = (y - np.min(y)) / (np.max(y) - np.min(y))
     return X, y
 
 def get_corr_pval(X, y):
@@ -199,7 +204,7 @@ def plot_corr_hist(acc, save_path = None):
 def plot_corr_hist_cond(acc, save_path = None):
 
     # prep x and y
-    dist = get_distance_matrix([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0])
+    dist = get_distance_matrix([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1])
 
     # get x and y
     X, y = prep_x_y_cond(acc, dist)
