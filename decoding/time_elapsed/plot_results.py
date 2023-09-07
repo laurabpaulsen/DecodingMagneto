@@ -11,7 +11,7 @@ sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to t
 
 
 
-colours = ['#0063B2FF', '#5DBB63FF']
+colours = ['#0063B2FF', '#5DBB63FF', 'lightblue']
 
 # set font for all plots
 plt.rcParams['font.family'] = 'sans-serif'
@@ -77,56 +77,7 @@ def flatten_remove_nans(tgm):
 
 
 
-def plot_tgm_correlations(tgm_dict):
-    for trial_type in ['animate', 'inanimate']:
-        # figure with subplots
-        fig, axs = plt.subplots(3, 3, figsize=(12, 9))
-        
-        for i, (file, params) in enumerate(tgm_dict.items()):
-            if params['trial_type'] == trial_type:
-                predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
-                true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
-
-                if params['trial_type'] == trial_type:
-                    # get the correlation between the predicted and true values for each timepoint
-                    cor_tgm = np.zeros((250, 250))
-                    for i in range(250):
-                        for j in range(250):
-                            # take only the non-nan values and flatten the array
-                            tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
-                            tmp_true = flatten_remove_nans(true[i, j, :, :])
-
-                            # calculate the correlation
-                            cor_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
-                        
-
-                    # based on the params determine the row and column of the subplot
-                    row, col = determine_row_col(params)
-                    
-                    # plot the results
-                    plot_tgm_ax(cor_tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1)
-
-
-        # add titles to the columns
-        axs[0, 0].set_title('Session Number'.upper())
-        axs[0, 1].set_title('Session Day'.upper())
-        axs[0, 2].set_title('Trial Number'.upper())
-
-        # add titles to the rows
-        axs[0, 0].set_ylabel('Combined'.upper())
-        axs[1, 0].set_ylabel('Memory'.upper())
-        axs[2, 0].set_ylabel('Visual'.upper())
-
-        # add a title to the figure
-        fig.suptitle(f'{trial_type.capitalize()} TGMs'.upper())
-
-        # tight layout
-        fig.tight_layout()
-        
-        # save the figure
-        plt.savefig(path.parent / 'plots' /f'time_elapsed_tgm_{trial_type}_corr.png', bbox_inches='tight')
-
-def plot_tgm_MSE(tgm_dict):
+def plot_tgm(tgm_dict, measurement = "MSE"):
     for trial_type in ['animate', 'inanimate']:
 
         fig, axs = plt.subplots(3, 3, figsize=(12, 9))
@@ -144,15 +95,22 @@ def plot_tgm_MSE(tgm_dict):
                         tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
                         tmp_true = flatten_remove_nans(true[i, j, :, :])
 
-                        # calculate the mean squared error
-                        MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
+                        if measurement == "MSE":
+                            # calculate the mean squared error
+                            MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
+                        elif measurement == "correlation":
+                            # calculate the correlation
+                            MSE_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
 
 
                 # based on the params determine the row and column of the subplot
                 row, col = determine_row_col(params)
                     
                 # plot the results
-                plot_tgm_ax(MSE_tgm, axs[row, col])
+                if measurement == "MSE":
+                    plot_tgm_ax(MSE_tgm, axs[row, col])
+                elif measurement == "correlation":
+                    plot_tgm_ax(MSE_tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1)
 
 
         # add titles to the columns
@@ -172,7 +130,58 @@ def plot_tgm_MSE(tgm_dict):
         fig.tight_layout()
         
         # save the figure
-        plt.savefig(path.parent / 'plots' /f'time_elapsed_tgm_{trial_type}_mse.png', bbox_inches='tight')
+        plt.savefig(path.parent / 'plots' /f'time_elapsed_tgm_{trial_type}_{measurement}.png', bbox_inches='tight')
+
+
+def plot_diagonals(tgm_dict, measurement = "MSE"):
+    for trial_type in ['animate', 'inanimate']:
+        # figure with subplots
+        fig, axs = plt.subplots(3, 1, figsize=(9, 9), sharey=True)
+        for i, (file, params) in enumerate(tgm_dict.items()):
+            if params['trial_type'] == trial_type:
+                predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
+                true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
+
+                if params['trial_type'] == trial_type:
+                    # get the correlation between the predicted and true values for each timepoint
+                    cor_list = []
+                    for i in range(250):
+                        # take only the non-nan values and flatten the array
+                        tmp_predicted = flatten_remove_nans(predicted[i, i, :, :])
+                        tmp_true = flatten_remove_nans(true[i, i, :, :])
+                        if measurement == "MSE":
+                            # calculate the mean squared error
+                            cor_list.append(np.mean((tmp_predicted - tmp_true)**2))
+                        elif measurement == "correlation":
+                            # calculate the correlation and append to list
+                            cor_list.append(np.corrcoef(tmp_predicted, tmp_true)[0, 1])
+                        
+                    # based on the params determine the row and column of the subplot
+                    row, col = determine_row_col(params)
+                    
+                    # plot the results
+                    axs[row].plot(cor_list, label=params['predict'], color=colours[col])
+
+        # add titles to the rows
+        axs[0].set_ylabel('Combined'.upper())
+        axs[1].set_ylabel('Memory'.upper())
+        axs[2].set_ylabel('Visual'.upper())
+
+        for ax in axs:
+            ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+            ax.legend(loc='upper right')
+            ax.set_xlim(0, 250)
+
+        # add a title to the figure
+        fig.suptitle(f'{trial_type.capitalize()} TGMs'.upper())
+        fig.supylabel(measurement.upper())
+        fig.supxlabel('Time (s)'.upper())
+
+        # tight layout
+        fig.tight_layout()
+        
+        # save the figure
+        plt.savefig(path.parent / 'plots' /f'time_elapsed_diagonal_{trial_type}_{measurement}.png', bbox_inches='tight')
 
 
 
@@ -200,8 +209,6 @@ if __name__ == "__main__":
         "inanimate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "inanimate"},
     }
 
-    # plot_tgm_correlations(tgm_files)
-    plot_tgm_MSE(tgm_files)
-
-    # plot correlation between predicted and true values
-    plot_tgm_correlations(tgm_files)
+    for measurement in ["MSE", "correlation"]:
+        plot_tgm(tgm_files, measurement=measurement)
+        plot_diagonals(tgm_files, measurement=measurement)
