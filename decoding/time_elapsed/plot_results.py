@@ -173,7 +173,7 @@ def plot_diagonals(tgm_dict, measurement = "MSE"):
             ax.set_xlim(0, 250)
 
         # add a title to the figure
-        fig.suptitle(f'{trial_type.capitalize()} TGMs'.upper())
+        fig.suptitle(f'{trial_type.capitalize()} Diagonals'.upper())
         fig.supylabel(measurement.upper())
         fig.supxlabel('Time (s)'.upper())
 
@@ -210,5 +210,5 @@ if __name__ == "__main__":
     }
 
     for measurement in ["MSE", "correlation"]:
-        plot_tgm(tgm_files, measurement=measurement)
+        #plot_tgm(tgm_files, measurement=measurement)
         plot_diagonals(tgm_files, measurement=measurement)
