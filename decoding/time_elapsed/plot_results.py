@@ -2,14 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from matplotlib.ticker import FuncFormatter
-
-
 # local imports
 import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
-
-
 
 colours = ['#0063B2FF', '#5DBB63FF', 'lightblue']
 
@@ -76,41 +71,23 @@ def flatten_remove_nans(tgm):
     return tgm
 
 
-
 def plot_tgm(tgm_dict, measurement = "MSE"):
     for trial_type in ['animate', 'inanimate']:
 
         fig, axs = plt.subplots(3, 3, figsize=(12, 9))
 
-        for i, (file, params) in enumerate(tgm_dict.items()):
-            if params['trial_type'] == trial_type:
-                predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
-                true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
-                        
-                # get the MSE between the predicted and true values for each timepoint
-                MSE_tgm = np.zeros((250, 250))
-                for i in range(250):
-                    for j in range(250):
-                        # take only the non-nan values and flatten the array
-                        tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
-                        tmp_true = flatten_remove_nans(true[i, j, :, :])
-
-                        if measurement == "MSE":
-                            # calculate the mean squared error
-                            MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
-                        elif measurement == "correlation":
-                            # calculate the correlation
-                            MSE_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
-
-
+        for key, value in tgm_dict.items():
+            params = value["params"]
+            tgm = value["tgm"]
+            if params['trial_type'] == trial_type:                        
                 # based on the params determine the row and column of the subplot
                 row, col = determine_row_col(params)
-                    
+
                 # plot the results
                 if measurement == "MSE":
-                    plot_tgm_ax(MSE_tgm, axs[row, col])
+                    plot_tgm_ax(tgm, axs[row, col])
                 elif measurement == "correlation":
-                    plot_tgm_ax(MSE_tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1)
+                    plot_tgm_ax(tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1)
 
 
         # add titles to the columns
@@ -137,35 +114,24 @@ def plot_diagonals(tgm_dict, measurement = "MSE"):
     for trial_type in ['animate', 'inanimate']:
         # figure with subplots
         fig, axs = plt.subplots(3, 1, figsize=(9, 9), sharey=True)
-        for i, (file, params) in enumerate(tgm_dict.items()):
+        for key, value in tgm_dict.items():
+            params = value["params"]
+            tgm = value["tgm"]
+            
             if params['trial_type'] == trial_type:
-                predicted = np.load(path.parent / 'results' / file, allow_pickle=True)
-                true = np.load(path.parent / 'results' / file.replace('predict', 'true'), allow_pickle=True)
-
-                if params['trial_type'] == trial_type:
-                    # get the correlation between the predicted and true values for each timepoint
-                    cor_list = []
-                    for i in range(250):
-                        # take only the non-nan values and flatten the array
-                        tmp_predicted = flatten_remove_nans(predicted[i, i, :, :])
-                        tmp_true = flatten_remove_nans(true[i, i, :, :])
-                        if measurement == "MSE":
-                            # calculate the mean squared error
-                            cor_list.append(np.mean((tmp_predicted - tmp_true)**2))
-                        elif measurement == "correlation":
-                            # calculate the correlation and append to list
-                            cor_list.append(np.corrcoef(tmp_predicted, tmp_true)[0, 1])
+                # get the correlation between the predicted and true values for each timepoint
+                diagonal_values = tgm.diagonal()
                         
-                    # based on the params determine the row and column of the subplot
-                    row, col = determine_row_col(params)
+                # based on the params determine the row and column of the subplot
+                row, col = determine_row_col(params)
                     
-                    # plot the results
-                    axs[row].plot(cor_list, label=params['predict'], color=colours[col])
+                # plot the results
+                axs[row].plot(diagonal_values, label=params['predict'], color=colours[col])
 
         # add titles to the rows
-        axs[0].set_ylabel('Combined'.upper())
-        axs[1].set_ylabel('Memory'.upper())
-        axs[2].set_ylabel('Visual'.upper())
+        axs[0].set_title('Combined'.upper())
+        axs[1].set_title('Memory'.upper())
+        axs[2].set_title('Visual'.upper())
 
         for ax in axs:
             ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
@@ -209,6 +175,34 @@ if __name__ == "__main__":
         "inanimate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "inanimate"},
     }
 
-    for measurement in ["MSE", "correlation"]:
-        #plot_tgm(tgm_files, measurement=measurement)
-        plot_diagonals(tgm_files, measurement=measurement)
+    
+    MSE_dict = {}
+    correlation_dict = {}
+
+    for i, (f, params) in enumerate(tgm_files.items()):
+        # load the predicted and true values
+        predicted = np.load(path.parent / 'results' / f, allow_pickle=True)
+        true = np.load(path.parent / 'results' / f.replace('predict', 'true'), allow_pickle=True)
+
+        # get the MSE and correlation between the predicted and true values for each timepoint
+        MSE_tgm = np.zeros((250, 250))
+        correlation_tgm = np.zeros((250, 250))
+
+        for i in range(250):
+            # take only the non-nan values and flatten the array
+            tmp_predicted = flatten_remove_nans(predicted[i, i, :, :])
+            tmp_true = flatten_remove_nans(true[i, i, :, :])
+            
+            for j in range(250):
+                # calculate the mean squared error
+                MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
+                correlation_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
+        
+        # save the tgm
+        MSE_dict[f] = {"tgm": MSE_tgm, "params": params}
+        correlation_dict[f] = {"tgm": correlation_tgm, "params": params}
+
+    # plot the results
+    for measurement, dictionary in zip(["correlation", "MSE"], [correlation_dict, MSE_dict]):
+        plot_tgm(tgm_files, measurement=measurement)
+        plot_diagonals(dictionary, measurement=measurement)
