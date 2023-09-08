@@ -113,12 +113,6 @@ def tgm_ridge_scores(X, y, stratify, alphas = np.logspace(0, 5, 10), ncv = 10, l
             X_test = X[:, stratify == strat, :]
             y_test = y[stratify == strat]
 
-            # convert all values to floats
-            X_train = X_train.astype(float)
-            y_train = y_train.astype(float)
-            X_test = X_test.astype(float)
-            y_test = y_test.astype(float)
-
             # standardize the data
             scaler = StandardScaler()
             X_train = scaler.fit_transform(X_train)
