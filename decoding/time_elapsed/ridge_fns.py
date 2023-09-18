@@ -23,8 +23,6 @@ def get_logger(filename):
     return logger
  
 
-
-
 def fit_ridge_clf(X, y, alphas:list, ncv = 10):
     """
     Fits the ridge classifier to the data.
