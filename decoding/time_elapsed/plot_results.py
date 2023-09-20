@@ -153,8 +153,8 @@ def prepare_dicts(file_dict, path):
         true_inanimate = np.load(path / 'results' / f.replace('animate', 'inanimate').replace('predict', 'true'), allow_pickle=True)
 
         # combine the animate and inanimate results by concatenating them along the last axis
-        predicted_combined = np.concatenate((predicted_animate, predicted_inanimate), axis=-1)
-        true_combined = np.concatenate((true_animate, true_inanimate), axis=-1)
+        predicted_combined = np.concatenate((predicted_animate.copy(), predicted_inanimate.copy()), axis=-1)
+        true_combined = np.concatenate((true_animate.copy(), true_inanimate.copy()), axis=-1)
  
         # get the MSE and correlation between the predicted and true values for each timepoint
         MSE_tgm = np.zeros((250, 250))
