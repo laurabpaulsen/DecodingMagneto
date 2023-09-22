@@ -117,14 +117,24 @@ def plot_corr(ax, corr, pval):
     # set limits
     ax.set_xlim([0, 250])
 
+def plot_hist_of_corr(ax, corr, p, bins):
+    ax.hist(corr, bins = bins, color="lightblue", orientation="horizontal")
+    ax.set_axis_off()
 
-def plot_corr_hist(acc, save_path = None):
+    # vertical line at mean
+    ax.axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
+
+    # add mean correlation and p-value
+    ax.text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax.transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+
+
+def plot_corr_hist(acc, bins_acc_mem, bin_acc_vis, bin_acc_combined, save_path = None):
     # only memory
-    mem_indices = [4, 5, 6, 7]
+    mem_indices = [7, 8, 9, 10]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
 
     # only visual
-    vis_indices = [0, 1, 2, 3, 8, 9, 10]
+    vis_indices = [0, 1, 2, 3, 4, 5, 6]
     vis_acc = acc[vis_indices, :, :, :][:, vis_indices, :, :]
 
     # order of sessions
@@ -134,14 +144,14 @@ def plot_corr_hist(acc, save_path = None):
     dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
 
     # set up figure
-    gs_kw = dict(width_ratios=[1, 0.4, 1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
-    fig, axes = plt.subplots(3, 4, figsize=(12, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
+    gs_kw = dict(width_ratios=[1, 0.4, 1, 0.4, 1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
+    fig, axes = plt.subplots(3, 6, figsize=(12, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
     bin_range = (-0.75, 0.75)
 
     bins = np.linspace(bin_range[0], bin_range[1], 40)
 
-    for i, (acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
+    for i, (tmp_acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
         for j, dist_type in enumerate(["dates", "order"]):
             if dist_type == "dates":
                 dist = get_distance_matrix(dates)
@@ -156,7 +166,7 @@ def plot_corr_hist(acc, save_path = None):
                 dist = dist[inds, :][:, inds]
 
             # get x and y
-            X, y = prep_x_y(acc, dist)
+            X, y = prep_x_y(tmp_acc, dist)
 
             # get correlation and p-values
             corr, pval = get_corr_pval(X, y)
@@ -174,15 +184,36 @@ def plot_corr_hist(acc, save_path = None):
             ax_corr.set_xlim([0, 250])
 
             # plot histogram of correlations
-            ax_hist.hist(corr, bins = bins, color="lightblue", orientation="horizontal")
-            ax_hist.set_axis_off()
+            plot_hist_of_corr(ax_hist, corr, p, bins)
 
-            # vertical line at mean
-            ax_hist.axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
 
-            # add mean correlation and p-value
-            ax_hist.text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax_hist.transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
-            
+    # adding the results from the bin analysis
+    for i, tmp_acc in enumerate([bin_acc_vis, bins_acc_mem, bin_acc_combined]):
+        dist = get_distance_matrix(range(tmp_acc.shape[0]))
+
+        ax_hist = axes[i, 4]
+        ax_corr = axes[i, 5]
+
+        # get x and y
+        X, y = prep_x_y(tmp_acc, dist)
+
+        # get correlation and p-values
+        corr, pval = get_corr_pval(X, y)
+
+        # test if mean of correlations is significantly different from 0
+        t, p = ttest_1samp(corr, 0)
+        print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
+
+        # plot correlation
+        ax_corr.plot(corr)
+        # seconds on x axis
+        x_axis_seconds(ax_corr)
+
+        # set limits
+        ax_corr.set_xlim([0, 250])
+
+        # plot histogram of correlations using function
+        plot_hist_of_corr(ax_hist, corr, p, bins)
 
     fig.supxlabel("TIME (s)", fontsize=16)
     fig.supylabel("PEARSON'S R", fontsize=16)
@@ -196,6 +227,7 @@ def plot_corr_hist(acc, save_path = None):
     # share title between columns
     axes[0, 0].set_title("Days".upper())
     axes[0, 2].set_title("Sessions".upper())
+    axes[0, 4].set_title("Bins".upper())
 
 
     if save_path is not None:
@@ -211,7 +243,6 @@ def plot_corr_hist_cond(acc, save_path = None):
 
     # get correlation and p-values
     corr, pval = get_corr_pval(X, y)
-
 
     # test if mean of correlations is significantly different from 0
     t, p = ttest_1samp(corr, 0)
@@ -233,15 +264,8 @@ def plot_corr_hist_cond(acc, save_path = None):
     ax[0].set_xlim([0, 250])
 
     # plot histogram of correlations
-    ax[1].hist(corr, bins = bins, color="lightblue", orientation="horizontal")
-    ax[1].set_axis_off()
-
-    # vertical line at mean
-    ax[1].axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
-
-    # add mean correlation and p-value
-    ax[1].text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax[1].transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
-
+    plot_corr_hist(ax[1], corr, p, bins)
+    
     # add title
     ax[0].set_title("Correlation".upper())
 
@@ -259,12 +283,25 @@ def plot_corr_hist_cond(acc, save_path = None):
 def main():
     path = Path(__file__)
 
-    # load accuracies
+    # load accuracies from cross decoding
     acc = np.load(path.parents[0] / "accuracies" / f"cross_decoding_10_LDA_sens.npy", allow_pickle=True)
+    
+    # load accuracies from cross_bin 
+    acc_com = np.load(path.parents[1] / "cross_bin" / "accuracies" / f"LDA_auto_10_all_11.npy", allow_pickle=True)
+    acc_vis = np.load(path.parents[1] / "cross_bin"/ "accuracies" / f"LDA_auto_10_visual_11.npy", allow_pickle=True)
+    acc_mem = np.load(path.parents[1] / "cross_bin" / "accuracies" / f"LDA_auto_10_memory_11.npy", allow_pickle=True)
+    
+    # output path
     plot_path = path.parents[0] / "plots" 
 
+
     # plot
-    plot_corr_hist(acc, save_path=plot_path / "corr_acc_dist.png")
+    plot_corr_hist(
+        acc = acc,
+        bins_acc_mem = acc_mem,
+        bin_acc_vis = acc_vis,
+        bin_acc_combined = acc_com,
+        save_path = plot_path / "corr_acc_dist.png")
 
     plot_corr_hist_cond(acc, save_path=plot_path / "corr_acc_dist_cond.png")
 
