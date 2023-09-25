@@ -156,9 +156,11 @@ def update_params(params, trial_type):
     """
     Updates the params dictionary to reflect the trial type
     """
-    params["trial_type"] = trial_type
+    tmp = params.copy()
+    tmp['trial_type'] = trial_type
 
-    return params
+    return tmp
+
 
 def prepare_dicts(file_dict, path):
     MSE_dict = {}
@@ -166,7 +168,6 @@ def prepare_dicts(file_dict, path):
 
     for f, params in file_dict.items():
         animate_file, inanimate_file, animate_true_file, inanimate_true_file = return_file_paths(path, f)
-        print(animate_file, inanimate_file, animate_true_file, inanimate_true_file)
 
         predicted_animate = np.load(animate_file, allow_pickle=True)
         true_animate = np.load(animate_true_file, allow_pickle=True)
@@ -228,22 +229,16 @@ if __name__ == "__main__":
         }
 
     MSE_dict, correlation_dict = prepare_dicts(tgm_files, path.parent)
+    
+    for measurement, dictionary in zip(["MSE", "correlation"], [MSE_dict, correlation_dict]):
+        for trial_type in ["animate", "inanimate", "combined"]:
+            print (f"Working on {trial_type}")
+            tmp_dict = {}
+            for key, value in dictionary.items():
+                if value["params"]["trial_type"] == trial_type:
+                    tmp_dict[key] = value
+                    print(key)
 
-    for trial_type in ["animate", "inanimate", "combined"]:
-        print (f"Working on {trial_type}")
-        tmp_dict = {}
-        for key, value in MSE_dict.items():
-            if value["params"]["trial_type"] == trial_type:
-                tmp_dict[key] = value
-                print(key)
-
-        # plot the results for each trial type
-        plot_tgm(tmp_dict, measurement="MSE", save_path=save_path, trial_type=trial_type)
-        plot_diagonals(tmp_dict, measurement="MSE", save_path=save_path, trial_type=trial_type)
-
-
-
-    # plot the results
-    for measurement, dictionary in zip(["correlation", "MSE"], [correlation_dict, MSE_dict]):
-        plot_tgm(dictionary, measurement=measurement)
-        plot_diagonals(dictionary, measurement=measurement)
+            # plot the results for each trial type
+            plot_tgm(tmp_dict, measurement=measurement, save_path=save_path, trial_type=trial_type)
+            plot_diagonals(tmp_dict, measurement=measurement, save_path=save_path, trial_type=trial_type)
