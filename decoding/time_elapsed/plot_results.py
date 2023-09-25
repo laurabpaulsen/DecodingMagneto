@@ -21,7 +21,6 @@ plt.rcParams['legend.title_fontsize'] = 12
 plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
-
 def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None):
 
     # plot the results
@@ -33,7 +32,7 @@ def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None):
 
     # add colorbar
     cbar = ax.figure.colorbar(im, ax=ax, pad=0.01, shrink=0.8)
-    
+
     cbar.ax.set_ylabel(cbar_label, rotation=-90, va="bottom", size=10)
     cbar.ax.ticklabel_format(useOffset=False, style = 'plain')
 
@@ -49,14 +48,14 @@ def determine_row_col(params):
         row = 1
     elif params['task'] == 'visual':
         row = 2
-    
+
     if params['predict'] == 'session number':
         col = 0
     elif params['predict'] == 'session day':
         col = 1
     elif params['predict'] == 'trial number':
         col = 2
-    
+
     return row, col
 
 def flatten_remove_nans(tgm):
@@ -67,7 +66,6 @@ def flatten_remove_nans(tgm):
     tgm = tgm[~np.isnan(tgm)]
 
     return tgm
-
 
 def plot_tgm(tgm_dict, measurement = "MSE", save_path = None, trial_type = None):
     fig, axs = plt.subplots(3, 3, figsize=(12, 9))
@@ -98,7 +96,7 @@ def plot_tgm(tgm_dict, measurement = "MSE", save_path = None, trial_type = None)
 
         # tight layout
         fig.tight_layout()
-        
+
         # save the figure
         if save_path:
             plt.savefig(save_path / f'time_elapsed_tgm_{measurement}_{trial_type}.png', bbox_inches='tight')
@@ -110,12 +108,12 @@ def plot_diagonals(tgm_dict, measurement = "MSE", save_path = None, trial_type =
     for key, value in tgm_dict.items():
         params = value["params"]
         tgm = value["tgm"]
-            
+
         diagonal_values = tgm.diagonal()
-                        
+
         # based on the params determine the row and column of the subplot
         row, col = determine_row_col(params)
-                    
+
         # plot the results
         axs[row].plot(diagonal_values, label=params['predict'].upper(), color=colours[col])
 
@@ -135,51 +133,75 @@ def plot_diagonals(tgm_dict, measurement = "MSE", save_path = None, trial_type =
 
         # tight layout
         fig.tight_layout()
-        
+
         # save the figure
         if save_path:
             plt.savefig(save_path /f'time_elapsed_diagonal_{measurement}_{trial_type}.png', bbox_inches='tight')
+
+def return_file_paths(path, file):
+    """
+    Returns file paths for animate and inanimate versions of the same file, both the predicted and true values
+    """
+
+    animate_file = path / 'results' / file
+    inanimate_file = path / 'results' / file.replace('animate', 'inanimate')
+
+    animate_true_file = path / 'results' / file.replace('predict', 'true')
+    inanimate_true_file = path / 'results' / file.replace('animate', 'inanimate').replace('predict', 'true')
+
+    return animate_file, inanimate_file, animate_true_file, inanimate_true_file
+    
+
+def update_params(params, trial_type):
+    """
+    Updates the params dictionary to reflect the trial type
+    """
+    params["trial_type"] = trial_type
+
+    return params
 
 def prepare_dicts(file_dict, path):
     MSE_dict = {}
     correlation_dict = {}
 
     for f, params in file_dict.items():
-        predicted_animate = np.load(path / 'results' / f, allow_pickle=True)
-        true_animate = np.load(path / 'results' / f.replace('predict', 'true'), allow_pickle=True)
+        animate_file, inanimate_file, animate_true_file, inanimate_true_file = return_file_paths(path, f)
+        print(animate_file, inanimate_file, animate_true_file, inanimate_true_file)
+
+        predicted_animate = np.load(animate_file allow_pickle=True)
+        true_animate = np.load(animate_true_file, allow_pickle=True)
 
         # to get the inanimate results, we need to swap the animate and inanimate labels
-        predicted_inanimate = np.load(path / 'results' / f.replace('animate', 'inanimate'), allow_pickle=True)
-        true_inanimate = np.load(path / 'results' / f.replace('animate', 'inanimate').replace('predict', 'true'), allow_pickle=True)
+        predicted_inanimate = np.load(inanimate_file, allow_pickle=True)
+        true_inanimate = np.load(inanimate_true_file, allow_pickle=True)
 
         # combine the animate and inanimate results by concatenating them along the last axis
         predicted_combined = np.concatenate((predicted_animate.copy(), predicted_inanimate.copy()), axis=-1)
         true_combined = np.concatenate((true_animate.copy(), true_inanimate.copy()), axis=-1)
- 
-        # get the MSE and correlation between the predicted and true values for each timepoint
-        MSE_tgm = np.zeros((250, 250))
-        correlation_tgm = np.zeros((250, 250))
 
         for trial_type, (predicted, true) in zip(["animate", "inanimate", "combined"], [(predicted_animate, true_animate), (predicted_inanimate, true_inanimate), (predicted_combined, true_combined)]):
+            # get the MSE and correlation between the predicted and true values for each timepoint
+            MSE_tgm = np.zeros((250, 250))
+            correlation_tgm = np.zeros((250, 250))
+            
             for i in range(250):
                 for j in range(250):
                     # take only the non-nan values and flatten the array
                     tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
                     tmp_true = flatten_remove_nans(true[i, j, :, :])
-                    
+
                     # calculate the mean squared error
                     MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
                     correlation_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
 
             # change params to reflect the trial type and the file name
-            tmp_params = params.copy()
-            tmp_params["trial_type"] = trial_type
+            tmp_params = update_params(params, trial_type)
             f_tmp = f.replace("animate", trial_type)
-                
+
             # save the tgm
             MSE_dict[f_tmp] = {"tgm": MSE_tgm, "params": tmp_params}
             correlation_dict[f_tmp] = {"tgm": correlation_tgm, "params": tmp_params}
-    
+
     return MSE_dict, correlation_dict
 
 
@@ -192,7 +214,7 @@ if __name__ == "__main__":
     # ensure that path to save plots exists
     if not save_path.exists():
         save_path.mkdir()
-    
+
     tgm_files = {
         "animate_combined_predict_session_number.npy": {"predict": "session number", "task": "combined", "trial_type": "animate"},
         "animate_combined_predict_session_day.npy": {"predict": "session day", "task": "combined", "trial_type": "animate"},
@@ -207,15 +229,21 @@ if __name__ == "__main__":
 
     MSE_dict, correlation_dict = prepare_dicts(tgm_files, path.parent)
 
+    for trial_type in ["animate", "inanimate", "combined"]:
+        print (f"Working on {trial_type}")
+        tmp_dict = {}
+        for key, value in MSE_dict.items():
+            if value["params"]["trial_type"] == trial_type:
+                tmp_dict[key] = value
+                print(key)
+
+        # plot the results for each trial type
+        plot_tgm(tmp_dict, measurement="MSE", save_path=save_path, trial_type=trial_type)
+        plot_diagonals(tmp_dict, measurement="MSE", save_path=save_path, trial_type=trial_type)
+
+
 
     # plot the results
     for measurement, dictionary in zip(["correlation", "MSE"], [correlation_dict, MSE_dict]):
-        for trial_type in ["animate", "inanimate", "combined"]:
-            tmp_dict = {}
-            for key, value in dictionary.items():
-                if value["params"]["trial_type"] == trial_type:
-                    tmp_dict[key] = value
-                    print(value)
-            # plot the results
-            plot_tgm(tmp_dict, measurement=measurement, save_path=save_path, trial_type=trial_type)
-            plot_diagonals(tmp_dict, measurement=measurement, save_path=save_path, trial_type=trial_type)
+        plot_tgm(dictionary, measurement=measurement)
+        plot_diagonals(dictionary, measurement=measurement)
