@@ -168,7 +168,7 @@ def prepare_dicts(file_dict, path):
         animate_file, inanimate_file, animate_true_file, inanimate_true_file = return_file_paths(path, f)
         print(animate_file, inanimate_file, animate_true_file, inanimate_true_file)
 
-        predicted_animate = np.load(animate_file allow_pickle=True)
+        predicted_animate = np.load(animate_file, allow_pickle=True)
         true_animate = np.load(animate_true_file, allow_pickle=True)
 
         # to get the inanimate results, we need to swap the animate and inanimate labels
