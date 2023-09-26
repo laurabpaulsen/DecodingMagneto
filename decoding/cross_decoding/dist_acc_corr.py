@@ -6,7 +6,8 @@ This script investigates the correlation between the decoding accuracies and the
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
+import pandas as pd
+
 
 from pathlib import Path
 
@@ -124,6 +125,9 @@ def plot_hist_of_corr(ax, corr, p, bins):
 
 
 def plot_corr_hist(acc, save_path = None):
+    # prepare dictinary for printing table
+    table = {}
+
     # only memory
     mem_indices = [7, 8, 9, 10]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
@@ -135,7 +139,6 @@ def plot_corr_hist(acc, save_path = None):
     # convert to datetime
     dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
     order = np.array([0, 1, 2, 3, 8, 9, 10, 4, 5, 6, 7])
-    
        
     # set up figure
     gs_kw = dict(width_ratios=[1, 0.4, 1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
@@ -146,21 +149,20 @@ def plot_corr_hist(acc, save_path = None):
     bins = np.linspace(bin_range[0], bin_range[1], 20)
 
     for i, (tmp_acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
+
+        condition = ["visual", "memory", "combined"][i]
+
         tmp_dates = dates.copy()[inds] if inds is not None else dates.copy()
         tmp_order = [i for i in order if i in inds] if inds is not None else order.copy()
 
-        for j, dist_type in enumerate(["dates", "order"]):
-            if dist_type == "dates":
+        for j, dist_type in enumerate(["days", "session"]):
+            if dist_type == "days":
                 dist = get_distance_matrix(tmp_dates)
-            elif dist_type == "order":
+            elif dist_type == "session":
                 dist = get_distance_matrix(tmp_order)
 
             ax_hist = axes[i, j*2+1]
             ax_corr = axes[i, j*2]
-            
-            
-            print(dist_type)
-            print(dist, "\n\n")
 
             # get x and y
             X, y = prep_x_y(tmp_acc, dist)
@@ -170,7 +172,14 @@ def plot_corr_hist(acc, save_path = None):
 
             # test if mean of correlations is significantly different from 0
             t, p = ttest_1samp(corr, 0)
-            #print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
+
+            # add to table
+            table[f'{i, j}'] = {
+                "condition": condition,
+                "distance type": dist_type,
+                "mean correlation": np.mean(corr),
+                "p-value": p}
+
 
             # plot correlation
             ax_corr.plot(corr) 
@@ -196,6 +205,15 @@ def plot_corr_hist(acc, save_path = None):
     # share title between columns
     axes[0, 0].set_title("Days".upper())
     axes[0, 2].set_title("Sessions".upper())
+
+    # add table
+    table = pd.DataFrame.from_dict(table, orient="index")
+
+    # round the values to 3 decimals
+    table = table.round(3)
+
+    # print table to console in latex format without index
+    print(table.to_latex(index=False))
 
 
     if save_path is not None:
