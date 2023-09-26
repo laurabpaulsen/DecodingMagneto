@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from pathlib import Path
+import pandas as pd
 
 # get pearsons r
 from scipy.stats import pearsonr
@@ -57,7 +58,7 @@ def prep_x_y(acc, dist):
 
     for i in range(dist.shape[0]):
         for j in range(dist.shape[1]):
-            if dist[i,j] != 0: # do not include within session decoding
+            if dist[i,j] != 0: # do not include within bin decoding
                 X.append(np.diag(acc[i, j, :, :]))
                 y.append(dist[i, j])
     
@@ -94,6 +95,8 @@ def plot_corr(ax, corr, pval):
 
 
 def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
+    # table for printing to latex
+    table = {}
     # set up figure
     gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
     fig, axes = plt.subplots(3, 2, figsize=(10, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
@@ -103,6 +106,8 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
     bins = np.linspace(bin_range[0], bin_range[1], 20)
 
     for i, acc in enumerate([vis_acc, mem_acc, all_acc]):
+        condition = ["visual", "memory", "combined"][i]
+
         dist = get_distance_matrix(range(acc.shape[0]))
         ax_hist = axes[i, 1]
         ax_corr = axes[i, 0]
@@ -115,7 +120,13 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
 
         # test if mean of correlations is significantly different from 0
         t, p = ttest_1samp(corr, 0)
-        print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
+        
+        # add to table
+        table[i] = {"condition": condition, 
+                    "distance type": "bins",
+                    "mean": np.mean(corr),
+                    "p-value": p}
+
 
         # plot correlation
         ax_corr.plot(corr) 
@@ -149,8 +160,9 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
     axes[2, 0].set_ylabel("Combined".upper())
     
 
-    # share title between columns
-    #axes[0, 0].set_title("bins".upper())
+    table = pd.DataFrame.from_dict(table, orient="index")
+    table = table.round(3)
+    print(table.to_latex(index=False))
 
     if save_path is not None:
         plt.savefig(save_path )
