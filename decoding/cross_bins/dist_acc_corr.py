@@ -98,15 +98,14 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
     gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
     fig, axes = plt.subplots(3, 2, figsize=(10, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
-    bin_range = (-0.4, 0.4)
+    bin_range = (-0.65, 0.65)
 
-    bins = np.linspace(bin_range[0], bin_range[1], 40)
+    bins = np.linspace(bin_range[0], bin_range[1], 20)
 
     for i, acc in enumerate([vis_acc, mem_acc, all_acc]):
         dist = get_distance_matrix(range(acc.shape[0]))
         ax_hist = axes[i, 1]
         ax_corr = axes[i, 0]
-
 
         # get x and y
         X, y = prep_x_y(acc, dist)
@@ -124,12 +123,15 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
         # seconds on x axis
         x_axis_seconds(ax_corr)
             
-        # set limits
-        ax_corr.set_xlim([0, 250])
-        
+
         # plot histogram of correlations
         ax_hist.hist(corr, bins = bins, color="lightblue", orientation="horizontal")
         ax_hist.set_axis_off()
+
+        # set limits
+        ax_corr.set_xlim([0, 250])
+        ax_corr.set_ylim([-0.45, 0.45])
+        ax_hist.set_ylim([-0.45, 0.45])
 
         # vertical line at mean
         ax_hist.axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
