@@ -67,9 +67,6 @@ def prep_x_y(acc, dist):
             if dist[i,j] != 0: # do not include within session decoding
                 X.append(np.diag(acc[i, j, :, :]))
                 y.append(dist[i, j])
-
-    # min max normalize y between 0 and 1
-    #y = (y - np.min(y)) / (np.max(y) - np.min(y))
     
     return X, y
 
@@ -84,8 +81,6 @@ def prep_x_y_cond(acc, dist):
                 X.append(np.diag(acc[i, j, :, :]))
                 y.append(dist[i, j])
     
-    # min max normalize y between 0 and 1
-    #y = (y - np.min(y)) / (np.max(y) - np.min(y))
     return X, y
 
 def get_corr_pval(X, y):
@@ -137,33 +132,35 @@ def plot_corr_hist(acc, save_path = None):
     vis_indices = [0, 1, 2, 3, 4, 5, 6]
     vis_acc = acc[vis_indices, :, :, :][:, vis_indices, :, :]
 
-    # order of sessions
-    order = [0, 1, 2, 3, 7, 8, 9, 10, 4, 5, 6] 
-
     # convert to datetime
     dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
-
+    order = np.array([0, 1, 2, 3, 8, 9, 10, 4, 5, 6, 7])
+    
+       
     # set up figure
     gs_kw = dict(width_ratios=[1, 0.4, 1, 0.4], height_ratios=[1, 1, 1], wspace=0.01, hspace=0.3)
     fig, axes = plt.subplots(3, 4, figsize=(12, 8), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
-    bin_range = (-0.75, 0.75)
+    bin_range = (-0.65, 0.65)
 
-    bins = np.linspace(bin_range[0], bin_range[1], 40)
+    bins = np.linspace(bin_range[0], bin_range[1], 20)
 
     for i, (tmp_acc, inds) in enumerate(zip([vis_acc, mem_acc, acc], [vis_indices, mem_indices, None])):
+        tmp_dates = dates.copy()[inds] if inds is not None else dates.copy()
+        tmp_order = [i for i in order if i in inds] if inds is not None else order.copy()
+
         for j, dist_type in enumerate(["dates", "order"]):
             if dist_type == "dates":
-                dist = get_distance_matrix(dates)
+                dist = get_distance_matrix(tmp_dates)
             elif dist_type == "order":
-                dist = get_distance_matrix(order)
+                dist = get_distance_matrix(tmp_order)
 
             ax_hist = axes[i, j*2+1]
             ax_corr = axes[i, j*2]
-
-            # use indices for visual and memory, not for combined
-            if inds is not None:
-                dist = dist[inds, :][:, inds]
+            
+            
+            print(dist_type)
+            print(dist, "\n\n")
 
             # get x and y
             X, y = prep_x_y(tmp_acc, dist)
@@ -173,7 +170,7 @@ def plot_corr_hist(acc, save_path = None):
 
             # test if mean of correlations is significantly different from 0
             t, p = ttest_1samp(corr, 0)
-            print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
+            #print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
 
             # plot correlation
             ax_corr.plot(corr) 
@@ -220,11 +217,11 @@ def plot_corr_hist_cond(acc, save_path = None):
     
     # set up figure
     gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1], wspace=0.01, hspace=0.3)
-    fig, ax = plt.subplots(1, 2, figsize=(8, 4), dpi=300, gridspec_kw=gs_kw)
+    fig, ax = plt.subplots(1, 2, figsize=(8, 6), dpi=300, gridspec_kw=gs_kw)
 
-    bin_range = (-0.75, 0.75)
+    bin_range = (-0.5, 0.5)
 
-    bins = np.linspace(bin_range[0], bin_range[1], 40)
+    bins = np.linspace(bin_range[0], bin_range[1], 20)
 
     # plot correlation
     ax[0].plot(corr)
@@ -235,10 +232,8 @@ def plot_corr_hist_cond(acc, save_path = None):
     ax[0].set_xlim([0, 250])
 
     # plot histogram of correlations
-    plot_corr_hist(ax[1], corr, p, bins)
-    
-    # add title
-    ax[0].set_title("Correlation".upper())
+    plot_hist_of_corr(ax[1], corr, p, bins)
+    print(f"Mean correlation: {np.mean(corr):.3f}, p-value: {p:.3f}")
 
     # add y label
     ax[0].set_ylabel("PEARSON'S R", fontsize=16)
