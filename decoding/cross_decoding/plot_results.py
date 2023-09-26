@@ -102,7 +102,95 @@ def plot_sig_clusters(ax, array_name):
 
 
 def add_dif_label(ax, label, colour = 'red'):
-    ax.text(-0.08, 1.1, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
+    ax.text(-0.02, 1.05, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
+
+def add_tgm_label(ax, label, colour = 'black'):
+    ax.text(-0.05, 1.05, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
+
+def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
+    fig, axs = plt.subplots(3, 3, figsize = (14, 12), dpi = 300, gridspec_kw={'height_ratios': [0.20, 1, 1]})
+    
+    vis = np.array([0, 1, 2, 3, 4, 5, 6])
+    mem = np.array([7, 8, 9, 10])
+    
+    n_trials_vis = 588 * len(vis)
+    n_trials_mem = 588 * len(mem)
+
+    vmin_diff = -5
+    vmax_diff = 5
+    
+    # VIS VIS
+    vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
+
+    plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='train: vis,  test:vis'.upper())
+    add_tgm_label(axs[1, 0], 'A')
+    add_diagonal_line(axs[1, 0], colour = "grey")
+
+    # MEM VIS
+    mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
+    axs[1, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='train:mem, test:vis'.upper())
+    add_tgm_label(axs[1, 1], 'B')
+    add_diagonal_line(axs[1, 1], colour = "grey")
+
+    # MEM MEM
+    mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
+    plot.plot_tgm_ax(mem_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="train:mem, test:mem".upper())
+    add_tgm_label(axs[2, 0], 'C')
+    add_diagonal_line(axs[2, 0], colour = "grey")
+
+    # VIS MEM
+    vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
+    plot.plot_tgm_ax(vis_mem, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'train:vis, test:mem'.upper())
+    add_tgm_label(axs[2, 1], 'D')
+    add_diagonal_line(axs[2, 1], colour = "grey")
+    
+
+    ### DIFFERENCE PLOTS ###
+    colour_map_diff = "PuOr_r" # sns.diverging_palette(220, 20, s = 70, l = 70, as_cmap=True)
+
+    # difference between vis_vis and mem_vis
+    plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
+    plot_sig_clusters(axs[1, 2], "visvis_memvis")
+    add_dif_label(axs[1, 2], 'A-B', colour = diff_colour)
+
+    # difference between vis_mem and mem_mem
+    axs[2, 2] = plot.plot_tgm_ax(mem_mem - vis_mem, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
+    add_dif_label(axs[2, 2], 'C-D', colour = diff_colour)
+    plot_sig_clusters(axs[2, 2], "vismem_memmem")
+
+
+    for ax in [axs[2,2], axs[1, 2]]:
+        x_axis_seconds(ax)
+        change_spine_colour(ax, diff_colour)
+        add_diagonal_line(ax, colour = diff_colour)
+
+    #plot colourbars in the first two columns of the first row
+    colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
+    labels = ['ACCURACY (%)', 'DIFFERENCE (%)']
+    for i, ax in enumerate(axs[0, :2]):
+        # remove the axis
+        ax.axis('off')
+        # add colourbar
+        cb = plt.colorbar(colour_loc[i], ax = ax, orientation = 'horizontal', pad = 0.9, shrink = 0.8)
+        cb.ax.set_title(labels[i], fontsize = 14)
+
+        if i == 1:
+            change_spine_colour(cb.ax, diff_colour)
+
+    axs[2,0].set_ylabel('TRAIN TIME (s)', fontsize=14)
+    axs[-1,1].set_xlabel('TEST TIME (s)', fontsize=14)
+
+    # remove last axis
+    axs[0, 2].axis('off')
+
+    # add space between plots
+    plt.tight_layout(h_pad = 3)
+
+    plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average_vis_mem_new.png'))
+    plt.close()
+
+
+
 
 def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
     fig, axs = plt.subplots(4, 3, figsize = (12, 12*4/3), dpi = 300)
@@ -341,6 +429,8 @@ def main_plot_generator():
 
         # plot averaged according to conditions and using cross-session pairs
         plot_train_test_condition(acc1, parc, diff_colour='darkblue')
+
+        plot_train_test_condition_new(acc1, parc, diff_colour='darkblue')
 
 
     # Diagonals of the parcellations together
