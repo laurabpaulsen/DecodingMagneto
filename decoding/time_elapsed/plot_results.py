@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from tqdm import tqdm
 
 # local imports
 import sys
@@ -76,7 +77,7 @@ def plot_tgm(tgm_dict, measurement = "MSE", save_path = None, trial_type = None,
     if measurement == "MSE":
         fig, axs = plt.subplots(3, 3, figsize=(12, 12))
     elif measurement == "correlation":
-        fig, axs = plt.subplots(3, 4, figsize=(12, 12), gridspec_kw={'width_ratios': [1, 1, 1, 0.10]})
+        fig, axs = plt.subplots(3, 4, figsize=(12, 11), gridspec_kw={'width_ratios': [1, 1, 1, 0.10]})
 
     for key, value in tgm_dict.items():
         params = value["params"]
@@ -186,7 +187,7 @@ def prepare_dicts(file_dict, path):
     MSE_dict = {}
     correlation_dict = {}
 
-    for f, params in file_dict.items():
+    for f, params in tqdm(file_dict.items(), desc="Preparing dictionaries with correlation and MSE results"):
         animate_file, inanimate_file, animate_true_file, inanimate_true_file = return_file_paths(path, f)
 
         predicted_animate = np.load(animate_file, allow_pickle=True)
