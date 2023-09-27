@@ -145,12 +145,14 @@ def plot_diagonals(tgm_dict, measurement = "MSE", save_path = None, trial_type =
 
         for ax in axs:
             ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-            ax.legend(loc='upper right')
             ax.set_xlim(0, 250)
 
         # add a title to the figure
         fig.supylabel(measurement.upper())
         fig.supxlabel('Time (s)'.upper())
+
+        # place legend on the top axis
+        axs[0].legend(loc='upper right')
 
         # tight layout
         fig.tight_layout()
