@@ -15,7 +15,6 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 if __name__ in "__main__":
-    # list all files in the aparc.a2009s directory
     path = os.path.join(os.path.sep, 'media', '8.1', 'final_data', 'laurap', 'epochs')
     files = os.listdir(path)
     
