@@ -167,7 +167,7 @@ def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour =
     #plot colourbars in the first two columns of the first row
     colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
     labels = ['ACCURACY (%)', 'DIFFERENCE (%)']
-    for i, ax in enumerate(axs[0, :2]):
+    for i, ax in enumerate(axs[0, 1:3]):
         # remove the axis
         ax.axis('off')
         # add colourbar
@@ -177,11 +177,15 @@ def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour =
         if i == 1:
             change_spine_colour(cb.ax, diff_colour)
 
-    axs[2,0].set_ylabel('TRAIN TIME (s)', fontsize=14)
-    axs[-1,1].set_xlabel('TEST TIME (s)', fontsize=14)
+    # for all the bottom plots
+    for ax in axs[-1, :]:
+        ax.set_xlabel('TEST TIME (s)', fontsize=14)
+
+    for ax in axs[:, 0]:
+        ax.set_ylabel('TRAIN TIME (s)', fontsize=14)
 
     # remove last axis
-    axs[0, 2].axis('off')
+    axs[0, 0].axis('off')
 
     # add space between plots
     plt.tight_layout(h_pad = 3)
