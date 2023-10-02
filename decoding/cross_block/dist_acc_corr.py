@@ -123,7 +123,7 @@ def plot_corr_hist(vis_acc, mem_acc, all_acc, save_path = None):
         
         # add to table
         table[i] = {"condition": condition, 
-                    "distance type": "bins",
+                    "distance type": "blocks",
                     "mean": np.mean(corr),
                     "p-value": p}
 
