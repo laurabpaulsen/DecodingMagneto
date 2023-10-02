@@ -22,7 +22,7 @@ setup.sh
 ```
 ├── decoding
 │   ├── condition                       <- Decoding between conditions (memory vs. no memory)
-│   ├── cross_bins                      <- Decoding across bins
+│   ├── cross_block                     <- Decoding across blocks
 │   ├── cross_decoding                  <- Decoding across sessions
 │   │    ├── accuracies                
 │   │    │   ├── cross_decoding_10_LDA_aparc.npy       
