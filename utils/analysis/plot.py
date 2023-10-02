@@ -80,9 +80,9 @@ def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None, 
     if title:
         ax.set_title(title)
 
-    fig.supxlabel('TIME (s)')
-    fig.supylabel('TIME (s)')
-
+    ax.set_xlabel('TEST TIME (s)')
+    ax.set_ylabel('TRAIN TIME (s)')
+    
     plt.tight_layout()
 
     if savepath is not None:
