@@ -8,13 +8,13 @@ colours = ['#0063B2FF', '#5DBB63FF']
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
-plt.rcParams['axes.labelsize'] = 14
-plt.rcParams['axes.titlesize'] = 14
-plt.rcParams['xtick.labelsize'] = 12
-plt.rcParams['ytick.labelsize'] = 12
-plt.rcParams['legend.fontsize'] = 10
-plt.rcParams['legend.title_fontsize'] = 12
-plt.rcParams['figure.titlesize'] = 14
+plt.rcParams['axes.labelsize'] = 18
+plt.rcParams['axes.titlesize'] = 18
+plt.rcParams['xtick.labelsize'] = 14
+plt.rcParams['ytick.labelsize'] = 14
+plt.rcParams['legend.fontsize'] = 14
+plt.rcParams['legend.title_fontsize'] = 16
+plt.rcParams['figure.titlesize'] = 20
 plt.rcParams['figure.dpi'] = 300
 
 
@@ -60,7 +60,7 @@ def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = F
 
 
 
-def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None, title = None):
+def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None, title = None, cbar_loc = "top"):
     if not X.shape == (250, 250):
         raise ValueError('X must be 250, 250')
 
@@ -74,14 +74,20 @@ def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None, 
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
     ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
 
-    cb = plt.colorbar(im, ax = ax, location = 'top', shrink = 0.5)
-    cb.set_label(label = 'Accuracy (%)'.upper())
+    cb = plt.colorbar(im, ax = ax, location = cbar_loc, shrink = 0.5)
+    cb.set_label(label = 'Accuracy (%)')
     
+    if cbar_loc == "right":
+        # turn the accuracy label
+        cb.ax.yaxis.label.set_rotation(270)
+        #add padding
+        cb.ax.yaxis.labelpad = 20
+        
     if title:
         ax.set_title(title)
 
-    ax.set_xlabel('TEST TIME (s)')
-    ax.set_ylabel('TRAIN TIME (s)')
+    ax.set_xlabel('Test time (s)')
+    ax.set_ylabel('Train time (s)')
     
     plt.tight_layout()
 
