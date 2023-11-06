@@ -18,7 +18,7 @@ plt.rcParams['figure.titlesize'] = 20
 plt.rcParams['figure.dpi'] = 300
 
 
-def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = False, title = None, title_fontsize = 14, cmap = 'RdBu_r'):
+def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = False, title = None, cmap = 'RdBu_r'):
     """
     Plots a time x time generalization matrix on an axis object
 
@@ -54,7 +54,7 @@ def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = F
         cb.set_label(label = 'Accuracy (%)')
 
     if title:
-        ax.set_title(title, fontsize = title_fontsize)
+        ax.set_title(title)
     
     return ax
 

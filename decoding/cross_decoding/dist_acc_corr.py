@@ -26,8 +26,8 @@ plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
 plt.rcParams['axes.labelsize'] = 14
 plt.rcParams['axes.titlesize'] = 14
-plt.rcParams['xtick.labelsize'] = 12
-plt.rcParams['ytick.labelsize'] = 12
+plt.rcParams['xtick.labelsize'] = 14
+plt.rcParams['ytick.labelsize'] = 14
 plt.rcParams['legend.fontsize'] = 10
 plt.rcParams['legend.title_fontsize'] = 12
 plt.rcParams['figure.titlesize'] = 14
@@ -121,7 +121,7 @@ def plot_hist_of_corr(ax, corr, p, bins):
     ax.axhline(np.mean(corr), color="k", linewidth=1, linestyle="--", label="Mean")
 
     # add mean correlation and p-value
-    ax.text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax.transAxes, verticalalignment='top', horizontalalignment='left', fontsize=10)
+    ax.text(0.05, 0.95, f"Mean: {np.mean(corr):.3f}\np-value: {p:.3f}", transform=ax.transAxes, verticalalignment='top', horizontalalignment='left', fontsize=14)
 
 
 def plot_corr_hist(acc, save_path = None):
@@ -217,7 +217,7 @@ def plot_corr_hist(acc, save_path = None):
 
 
     if save_path is not None:
-        plt.savefig(save_path )
+        plt.savefig(save_path)
 
 def plot_corr_hist_cond(acc, save_path = None):
 
@@ -264,6 +264,73 @@ def plot_corr_hist_cond(acc, save_path = None):
         plt.savefig(save_path)
 
 
+
+def plot_corr_hist_poster(acc, save_path = None):
+
+    # only visual
+    vis_indices = [0, 1, 2, 3, 4, 5, 6]
+    vis_acc = acc[vis_indices, :, :, :][:, vis_indices, :, :]
+
+    order = np.array([0, 1, 2, 3, 8, 9, 10, 4, 5, 6, 7])
+    dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
+
+       
+    # set up figure
+    gs_kw = dict(width_ratios=[1, 0.4], wspace=0.01, hspace=0.3)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 6), dpi=300, gridspec_kw=gs_kw, sharey=True)
+
+    bin_range = (-0.65, 0.65)
+
+    bins = np.linspace(bin_range[0], bin_range[1], 20)
+
+    tmp_dates = dates.copy()[vis_indices]
+
+
+    dist = get_distance_matrix(tmp_dates)
+
+    ax_hist = axes[1]
+    ax_corr = axes[0]
+
+    # get x and y
+    X, y = prep_x_y(vis_acc, dist)
+
+    # get correlation and p-values
+    corr, pval = get_corr_pval(X, y)
+
+    # test if mean of correlations is significantly different from 0
+    t, p = ttest_1samp(corr, 0)
+
+
+    # plot correlation
+    ax_corr.plot(corr) 
+            
+    # seconds on x axis
+    x_axis_seconds(ax_corr)
+            
+    # set limits
+    ax_corr.set_xlim([0, 250])
+
+    # plot histogram of correlations
+    plot_hist_of_corr(ax_hist, corr, p, bins)
+
+
+    axes[0].set_xlabel("Time (s)", fontsize=16)
+    axes[0].set_ylabel("Pearson's R", fontsize=16)
+
+    
+    # first column y label
+    #axes[0, 0].set_ylabel("Visual".upper())
+    #axes[1, 0].set_ylabel("Memory".upper())
+    #axes[2, 0].set_ylabel("Combined".upper())
+
+    # share title between columns
+    #axes[0, 0].set_title("Days".upper())
+    #axes[0, 2].set_title("Sessions".upper())
+
+    if save_path is not None:
+        plt.savefig(save_path )
+
+
 def main():
     path = Path(__file__)
 
@@ -274,9 +341,12 @@ def main():
     plot_path = path.parents[0] / "plots" 
 
     # plot
-    plot_corr_hist(acc = acc, save_path = plot_path / "corr_acc_dist.png")
+    #plot_corr_hist(acc = acc, save_path = plot_path / "corr_acc_dist.png")
 
-    plot_corr_hist_cond(acc, save_path=plot_path / "corr_acc_dist_cond.png")
+    #plot_corr_hist_cond(acc, save_path=plot_path / "corr_acc_dist_cond.png")
+
+    # plot for poster with only visual days
+    plot_corr_hist_poster(acc = acc, save_path = plot_path / "corr_acc_dist_poster.png")
 
         
 

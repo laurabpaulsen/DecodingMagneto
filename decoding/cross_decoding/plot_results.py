@@ -18,14 +18,15 @@ alpha = 0.05
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['image.cmap'] = 'RdBu_r'
 plt.rcParams['image.interpolation'] = 'bilinear'
-plt.rcParams['axes.labelsize'] = 14
-plt.rcParams['axes.titlesize'] = 14
-plt.rcParams['xtick.labelsize'] = 12
-plt.rcParams['ytick.labelsize'] = 12
-plt.rcParams['legend.fontsize'] = 10
-plt.rcParams['legend.title_fontsize'] = 12
-plt.rcParams['figure.titlesize'] = 18
+plt.rcParams['axes.labelsize'] = 20
+plt.rcParams['axes.titlesize'] = 20
+plt.rcParams['xtick.labelsize'] = 16
+plt.rcParams['ytick.labelsize'] = 16
+plt.rcParams['legend.fontsize'] = 14
+plt.rcParams['legend.title_fontsize'] = 16
+plt.rcParams['figure.titlesize'] = 20
 plt.rcParams['figure.dpi'] = 300
+
 
 
 def determine_linestyle(train_condition, test_condition):
@@ -73,14 +74,54 @@ def y_axis_percent(ax):
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
 
 def plot_cross_decoding_matrix(acc, save_path = None):
-    fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (30, 30))
+    fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (12, 12), gridspec_kw={'width_ratios': [1, 1, 1, 1]})
     
     for i in range(acc.shape[0]):
         for j in range(acc.shape[1]):
-            axs[i, j] = plot.plot_tgm_ax(acc[i, j], ax=axs[i, j], vmin=35, vmax=65)
-            axs[i, j].set_title(f'train:{i+1}, test:{j+1}')
+            if i == j:
+                axs[i, j].axis('off')
+                plot.plot_tgm_ax(np.zeros((250, 250)), ax=axs[i, j], vmin=-1, vmax=0.5, cmap='Greys')
+
+            else:
+                plot.plot_tgm_ax(acc[i, j], ax=axs[i, j], vmin=35, vmax=65)
+                # add diagonal line
+                add_diagonal_line(axs[i, j], colour='grey')
+                # change x and y axis to seconds
+                #axs[i, j].set_xticks(np.arange(0, 251, step=100), [0. , 0.4, 0.8])
+                #axs[i, j].set_yticks(np.arange(0, 251, step=100), [0. , 0.4, 0.8])
+
+                # remove x ticks
+                axs[i, j].set_xticks([])
+                axs[i, j].set_yticks([])
+
     
+    # add colour bar
+    #colour_loc = axs[1, 0].images[0]
+    #cb = plt.colorbar(colour_loc, ax = axs[1, -1], location = 'right')
+    #cb.ax.set_ylabel('Accuracy (%)')
+
+    for ax in axs[:, -1]:
+        # remove x ticks
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    # set title of all axes on first row
+    for i, ax in enumerate(axs[0, :]):
+        ax.set_title(f'Session {i+1}')
+
+    # set title of all axes on first column
+    for i, ax in enumerate(axs[:, 0]):
+        print(f"Session {i+1}")
+        ax.set_ylabel(f'Session {i+1}')
+
+
+    # axis of in the last column
+    #for ax in axs[:, -1]:
+    #    ax.axis('off')
+
+    # increase space between plots
     plt.tight_layout()
+    
     if save_path: 
         plt.savefig(save_path)
     plt.close()
@@ -108,7 +149,7 @@ def add_tgm_label(ax, label, colour = 'black'):
     ax.text(-0.05, 1.05, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
 
 def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
-    fig, axs = plt.subplots(3, 3, figsize = (14, 12), dpi = 300, gridspec_kw={'height_ratios': [0.20, 1, 1]})
+    fig, axs = plt.subplots(3, 3, figsize = (14, 12), dpi = 300, gridspec_kw={'height_ratios': [1, 1, 0.20]})
     
     vis = np.array([0, 1, 2, 3, 4, 5, 6])
     mem = np.array([7, 8, 9, 10])
@@ -122,70 +163,67 @@ def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour =
     # VIS VIS
     vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
 
-    plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='train: vis,  test:vis'.upper())
-    add_tgm_label(axs[1, 0], 'A')
-    add_diagonal_line(axs[1, 0], colour = "grey")
+    plot.plot_tgm_ax(vis_vis, ax=axs[0, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='visual -> visual')
+    add_diagonal_line(axs[0, 0], colour = "grey")
 
     # MEM VIS
     mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
-    axs[1, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='train:mem, test:vis'.upper())
-    add_tgm_label(axs[1, 1], 'B')
-    add_diagonal_line(axs[1, 1], colour = "grey")
+    plot.plot_tgm_ax(mem_vis, ax=axs[0, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='memory -> visual')
+    add_diagonal_line(axs[0, 1], colour = "grey")
 
     # MEM MEM
     mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
-    plot.plot_tgm_ax(mem_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="train:mem, test:mem".upper())
-    add_tgm_label(axs[2, 0], 'C')
-    add_diagonal_line(axs[2, 0], colour = "grey")
+    plot.plot_tgm_ax(mem_mem, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="memory -> memory")
+    add_diagonal_line(axs[1, 0], colour = "grey")
 
     # VIS MEM
     vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
-    plot.plot_tgm_ax(vis_mem, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'train:vis, test:mem'.upper())
-    add_tgm_label(axs[2, 1], 'D')
-    add_diagonal_line(axs[2, 1], colour = "grey")
+    plot.plot_tgm_ax(vis_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'visual -> memory')
+    add_diagonal_line(axs[1, 1], colour = "grey")
     
 
     ### DIFFERENCE PLOTS ###
     colour_map_diff = "PuOr_r" # sns.diverging_palette(220, 20, s = 70, l = 70, as_cmap=True)
 
     # difference between vis_vis and mem_vis
-    plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    plot_sig_clusters(axs[1, 2], "visvis_memvis")
-    add_dif_label(axs[1, 2], 'A-B', colour = diff_colour)
+    plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff, title = '(visual -> visual) \n - (memory -> visual)')
+    plot_sig_clusters(axs[0, 2], "visvis_memvis")
 
     # difference between vis_mem and mem_mem
-    axs[2, 2] = plot.plot_tgm_ax(mem_mem - vis_mem, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    add_dif_label(axs[2, 2], 'C-D', colour = diff_colour)
-    plot_sig_clusters(axs[2, 2], "vismem_memmem")
+    plot.plot_tgm_ax(mem_mem - vis_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff, title = '(memory -> memory) \n - (visual -> memory)')
+    plot_sig_clusters(axs[1, 2], "vismem_memmem")
 
 
-    for ax in [axs[2,2], axs[1, 2]]:
+    for ax in [axs[1,2], axs[0, 2]]:
         x_axis_seconds(ax)
         change_spine_colour(ax, diff_colour)
         add_diagonal_line(ax, colour = diff_colour)
 
     #plot colourbars in the first two columns of the first row
     colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
-    labels = ['ACCURACY (%)', 'DIFFERENCE (%)']
-    for i, ax in enumerate(axs[0, 1:3]):
+    labels = ['Accuracy (%)', 'Difference (%)']
+    for i, ax in enumerate(axs[-1, 1:3]):
         # remove the axis
         ax.axis('off')
         # add colourbar
         cb = plt.colorbar(colour_loc[i], ax = ax, orientation = 'horizontal', pad = 0.9, shrink = 0.8)
-        cb.ax.set_title(labels[i], fontsize = 14)
+        cb.ax.set_title(labels[i])
 
         if i == 1:
             change_spine_colour(cb.ax, diff_colour)
 
     # for all the bottom plots
-    for ax in axs[-1, :]:
-        ax.set_xlabel('TEST TIME (s)', fontsize=14)
+    #for ax in axs[-1, :]:
+    #    ax.set_xlabel('Test time (s)')
+    #for ax in axs[:, 0]:
+    #    ax.set_ylabel('TRAIN TIME (s)', fontsize=14)
 
-    for ax in axs[:, 0]:
-        ax.set_ylabel('TRAIN TIME (s)', fontsize=14)
+    for ax in axs.flatten():
+        ax.set_xlabel('Test time (s)')
+        ax.set_ylabel('Train time (s)')
 
     # remove last axis
-    axs[0, 0].axis('off')
+    axs[-1, 0].axis('off')
 
     # add space between plots
     plt.tight_layout(h_pad = 3)
@@ -414,9 +452,12 @@ def main_plot_generator():
         
         # read in results
         accuracies[parc] = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
-
+        print(accuracies[parc].shape)
         # plot all pairs of sessions in one figure
         #plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
+
+        # plot all pairs in the of the first 4 sessions in one figure
+        plot_cross_decoding_matrix(accuracies[parc][:4, :4, :, :], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix_first4.png'))
 
         # average over all sessions
         cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'))
@@ -428,11 +469,11 @@ def main_plot_generator():
         accuracies_cross[parc] = acc1
 
         # plot average over all conditions and all cross-session pairs
-        plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), )
-        plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
+        #plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), )
+        #plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
 
         # plot averaged according to conditions and using cross-session pairs
-        plot_train_test_condition(acc1, parc, diff_colour='darkblue')
+        #plot_train_test_condition(acc1, parc, diff_colour='darkblue')
 
         plot_train_test_condition_new(acc1, parc, diff_colour='darkblue')
 
