@@ -26,7 +26,7 @@ if __name__ == "__main__":
     acc = np.load(os.path.join('accuracies', 'accuracies_memory_or_visual.npy'), allow_pickle=True)
 
     # one fig with the average
-    plt = plot.plot_tgm_fig(acc, vmin=25, vmax=75, chance_level=chance_level(6146, alpha = 0.001, p = 0.5), cbar_loc="right")
+    plt = plot.plot_tgm_fig(acc, vmin=25, vmax=75, chance_level=chance_level(6146, alpha = 0.001, p = 0.5), cbar_loc="right", linewitdh=0.7)
     plt.tight_layout()
     plt.savefig(os.path.join('plots', f'tgm_decoding_condition.png'))
     
