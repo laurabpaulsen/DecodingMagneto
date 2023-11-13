@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from scipy.stats import pearsonr
 from pandas import to_datetime
+from mne.stats import permutation_cluster_test
 
 # set parameters for all plots
 plt.rcParams['font.family'] = 'sans-serif'
@@ -80,7 +81,6 @@ def plot_corr(ax, corr, pval, alpha = 0.05, color = "lightblue", y_lim=None):
     ax.set_xlim([0, 250])
 
 
-
 def plot_hist_of_corr(ax, corr, bins, color="lightblue", y_lim=(-0.5, 0.5)):
     ax.hist(corr, bins = bins, color=color, orientation="horizontal")
     ax.set_axis_off()
@@ -90,6 +90,31 @@ def plot_hist_of_corr(ax, corr, bins, color="lightblue", y_lim=(-0.5, 0.5)):
 
     # limits
     ax.set_ylim(y_lim)
+
+def permute_x_y(X, y, n_perm):
+     # array for storing actual correlation
+    corrs = np.zeros(X.shape[1])
+
+    # initialize numpy array to store all permutations
+    permutations_corr = np.zeros((n_perm, len(X[0])))
+
+    # loop over time points
+    for t in range(X.shape[1]):
+        # actual correlation
+        corrs[t], _ = pearsonr(X[:, t], y)
+
+    # loop over all permutations
+    for n in range(n_perm):
+        # permute y
+        perm_y = np.random.permutation(y)
+        for t in range(X.shape[1]):
+            # calculate correlation
+            perm_corr, _ = pearsonr(X[:, t], perm_y)
+
+            # store permutation correlation
+            permutations_corr[n, t] = perm_corr
+
+    return corrs, permutations_corr
 
 
 def permutation_test(X, y, n_perm):
@@ -101,27 +126,7 @@ def permutation_test(X, y, n_perm):
     X : numpy array
         Array of shape (n_sessionpairs, n_timepoints) containing the decoding accuracies
     """
-    # array for storing actual correlation
-    corrs = np.zeros(X.shape[1])
-
-    # initialize numpy array to store all permutations
-    permutations_corr = np.zeros((n_perm, len(X[0])))
-
-    # loop over time points
-    for t in range(X.shape[1]):
-        # actual correlation
-        corrs[t], _ = pearsonr(X[:, t], y)
-
-        # loop over all permutations
-        for n in range(n_perm):
-            # permute y
-            perm_y = np.random.permutation(y)
-
-            # calculate correlation
-            perm_corr, _ = pearsonr(X[:, t], perm_y)
-
-            # store permutation correlation
-            permutations_corr[n, t] = perm_corr
+    corrs, permutations_corr = permute_x_y(X, y, n_perm)
 
     pvals = np.zeros(X.shape[1])
     
@@ -131,7 +136,25 @@ def permutation_test(X, y, n_perm):
         
     return corrs, permutations_corr, pvals
 
-def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05):
+def cluster_permutation_test_mne(X, y, n_perm):
+    """
+    Uses the MNE python function to conduct a cluster permutation test
+    """
+
+    corrs, permutations_corr = permute_x_y(X, y, n_perm)
+
+    # reshape corrs
+    corrs = corrs.reshape(1, -1)
+    
+    # calculate p-value
+    T_obs, clusters, cluster_p_values, H0 = permutation_cluster_test(
+        [corrs, permutations_corr], 
+        n_permutations=n_perm, 
+        threshold=0.05)
+    
+    return corrs, permutations_corr, clusters, cluster_p_values
+    
+def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000):
 
     # prep x and y
     dist = get_distance_matrix([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1])
@@ -140,15 +163,35 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
     X, y = prep_x_y(acc, dist)
 
     # permutation test to see if correlation is significant
-    n_perm = 1000
-    corr, all_perm, pvals = permutation_test(X, y, n_perm)
+    if not cluster:
+        corr, all_perm, pvals = permutation_test(X, y, n_perm)
+    else:
+        corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm)
+        
+        # reshape corr
+        corr = corr.reshape(-1)
+
+        # get indices of significant clusters
+        sig_clusters_idx = np.where(pvals_tmp < alpha)[0]
+
+        # get indices of significant time points
+        try: 
+            sig_timepoints = np.concatenate([clusters[i][0] for i in sig_clusters_idx])
+        except:
+            sig_timepoints = []
+    
+        # get pvals
+        pvals = np.ones(X.shape[1])
+
+        # set pvals of significant time points to 0
+        pvals[sig_timepoints] = 0
+
 
     # set up figure
     gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1], wspace=0.01, hspace=0.3)
     fig, ax = plt.subplots(1, 2, figsize=(10, 6), dpi=300, gridspec_kw=gs_kw)
 
     bin_range = (-0.5, 0.5)
-
     bins = np.linspace(bin_range[0], bin_range[1], 20)
 
     # plot permutations
@@ -156,11 +199,12 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
         ax[0].plot(perm, color=perm_color, linewidth=0.5, alpha=0.4)
 
     plot_corr(ax[0], corr, pvals, alpha = alpha, color=corr_color)
+    
     # get y limits
     y_lim = ax[0].get_ylim()
 
     # plot histogram of correlations
-    plot_hist_of_corr(ax[1], corr, bins, color=corr_color, y_lim=None)
+    plot_hist_of_corr(ax[1], corr, bins, color=corr_color, y_lim=y_lim)
 
 
     # add y label
@@ -174,7 +218,7 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
         plt.savefig(save_path)
 
 
-def plot_corr_hist_no_combined(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05):
+def plot_corr_hist_no_combined(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000):
     # only memory
     mem_indices = [7, 8, 9, 10]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
@@ -213,8 +257,28 @@ def plot_corr_hist_no_combined(acc, save_path = None, corr_color="C0", perm_colo
             X, y = prep_x_y(tmp_acc, dist)
 
             # permutation test to see if correlation is significant
-            n_perm = 1000
-            corr, all_perm, pvals = permutation_test(X, y, n_perm)
+            if not cluster:
+                corr, all_perm, pvals = permutation_test(X, y, n_perm)
+            else:
+                corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm)
+                
+                # reshape corr
+                corr = corr.reshape(-1)
+
+                # get indices of significant clusters
+                sig_clusters_idx = np.where(pvals_tmp < alpha)[0]
+
+                # get indices of significant time points
+                try: 
+                    sig_timepoints = np.concatenate([clusters[i][0] for i in sig_clusters_idx])
+                except:
+                    sig_timepoints = []
+            
+                # get pvals
+                pvals = np.ones(X.shape[1])
+
+                # set pvals of significant time points to 0
+                pvals[sig_timepoints] = 0
             
             for perm in all_perm:
                 ax_corr.plot(perm, color=perm_color, linewidth=0.5, alpha=0.4)
@@ -253,16 +317,17 @@ if __name__ == "__main__":
     # output path
     plot_path = path.parents[0] / "plots" 
 
-    alpha = 0.001
-    # plot
-    #plot_corr_hist(acc = acc, save_path = plot_path / "corr_acc_dist.png")
+    alpha = 0.05
+
     plot_corr_hist_no_combined(
         acc = acc, 
         save_path = plot_path / "corr_acc_dist_no_combined.png",
-        alpha = alpha)
+        alpha = alpha,
+        cluster=True)
 
     plot_corr_hist_cond(
         acc, 
         save_path=plot_path / "corr_acc_dist_cond.png",
-        alpha = alpha
+        alpha = alpha,
+        cluster=True
         )
