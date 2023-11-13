@@ -40,11 +40,11 @@ def determine_colour(i, j):
 
     return colors[abs(i-j)]
 
-def add_diagonal_line(ax, colour = 'red'):
+def add_diagonal_line(ax, colour = 'red', linewidth = 1):
     """
     Adds a diagonal line to a plot
     """
-    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color = colour, linestyle = '--', alpha = 0.5, linewidth = 1)
+    ax.plot([0, 1], [0, 1], transform=ax.transAxes, color = colour, linestyle = '--', alpha = 0.5, linewidth = linewidth)
 
 
 def change_spine_colour(ax, colour):
@@ -74,25 +74,22 @@ def y_axis_percent(ax):
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
 
 def plot_cross_decoding_matrix(acc, save_path = None):
-    fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (12, 12), gridspec_kw={'width_ratios': [1, 1, 1, 1]})
+    fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (12, 12), gridspec_kw={'width_ratios': [1, 1, 1]})
     
     for i in range(acc.shape[0]):
         for j in range(acc.shape[1]):
-            if i == j:
-                axs[i, j].axis('off')
-                plot.plot_tgm_ax(np.zeros((250, 250)), ax=axs[i, j], vmin=-1, vmax=0.5, cmap='Greys')
+            #if i == j:
+            #    axs[i, j].axis('off')
+            #    plot.plot_tgm_ax(np.zeros((250, 250)), ax=axs[i, j], vmin=-1, vmax=0.5, cmap='Greys')
 
-            else:
-                plot.plot_tgm_ax(acc[i, j], ax=axs[i, j], vmin=35, vmax=65)
-                # add diagonal line
-                add_diagonal_line(axs[i, j], colour='grey')
-                # change x and y axis to seconds
-                #axs[i, j].set_xticks(np.arange(0, 251, step=100), [0. , 0.4, 0.8])
-                #axs[i, j].set_yticks(np.arange(0, 251, step=100), [0. , 0.4, 0.8])
+            plot.plot_tgm_ax(acc[i, j], ax=axs[i, j], vmin=35, vmax=65)
+            # add diagonal line
+            add_diagonal_line(axs[i, j], colour='grey', linewidth=2)
 
-                # remove x ticks
-                axs[i, j].set_xticks([])
-                axs[i, j].set_yticks([])
+
+            # remove x ticks
+            axs[i, j].set_xticks([])
+            axs[i, j].set_yticks([])
 
     
     # add colour bar
@@ -457,7 +454,7 @@ def main_plot_generator():
         #plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
 
         # plot all pairs in the of the first 4 sessions in one figure
-        plot_cross_decoding_matrix(accuracies[parc][:4, :4, :, :], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix_first4.png'))
+        plot_cross_decoding_matrix(accuracies[parc][:3, :3, :, :], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix_first4.png'))
 
         # average over all sessions
         cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'))
