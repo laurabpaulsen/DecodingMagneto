@@ -70,63 +70,12 @@ def flatten_remove_nans(tgm):
     return tgm
 
 
-def plot_tgm(tgm_dict, measurement = "MSE", save_path = None, trial_type = None, cmap="RdBu_r"):
-    if measurement not in ["MSE", "correlation"]:
-        raise ValueError("measurement must be either MSE or correlation")
-
-    if measurement == "MSE":
-        fig, axs = plt.subplots(3, 3, figsize=(12, 12))
-    elif measurement == "correlation":
-        fig, axs = plt.subplots(3, 4, figsize=(12, 11), gridspec_kw={'width_ratios': [1, 1, 1, 0.10]})
-
-    for key, value in tgm_dict.items():
-        params = value["params"]
-        tgm = value["tgm"]
-
-        row, col = determine_row_col(params)
-
-        # plot the results
-        if measurement == "MSE":
-            plot_tgm_ax(tgm, axs[row, col], cmap=cmap)
-        elif measurement == "correlation":
-            plot_tgm_ax(tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1, cmap=cmap, colourbar=False)
-
-
-    # add titles to the columns
-    axs[0, 0].set_title('Session Number'.upper())
-    axs[0, 1].set_title('Session Day'.upper())
-    axs[0, 2].set_title('Trial Number'.upper())
-
-    # add titles to the rows
-    axs[0, 0].set_ylabel('Combined'.upper())
-    axs[1, 0].set_ylabel('Memory'.upper())
-    axs[2, 0].set_ylabel('Visual'.upper())
-
-    
-    if measurement == "correlation":
-        # plot colourbar
-        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=-1, vmax=1))
-        cax = make_axes_locatable(axs[1, -1]).append_axes("right", pad=0.05, size="100%")
-        cbar = fig.colorbar(sm, cax=cax)
-        cbar.ax.set_ylabel('Correlation', rotation=270, labelpad=15)
-
-        for ax in axs[:, -1]:
-            ax.set_axis_off()
-
-    # tight layout
-    fig.tight_layout()
-
-    # save the figure
-    if save_path:
-        plt.savefig(save_path / f'time_elapsed_tgm_{measurement}_{trial_type}.png', bbox_inches='tight')
-
-
 def plot_tgm_session_day(tgm_dict, measurement = "MSE", save_path = None, trial_type = None, cmap="RdBu_r"):
     if measurement not in ["MSE", "correlation"]:
         raise ValueError("measurement must be either MSE or correlation")
 
     elif measurement == "correlation":
-        fig, axs = plt.subplots(2, 2, figsize=(12, 11), gridspec_kw={'width_ratios': [1, 0.10]})
+        fig, axs = plt.subplots(2, 2, figsize=(7, 6), gridspec_kw={'width_ratios': [1, 0.10]})
 
     for key, value in tgm_dict.items():
         params = value["params"]
@@ -141,7 +90,6 @@ def plot_tgm_session_day(tgm_dict, measurement = "MSE", save_path = None, trial_
         # plot the results
         plot_tgm_ax(tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1, cmap=cmap, colourbar=False)
             
-
 
     axs[0, 0].set_ylabel('Memory'.upper())
     axs[1, 0].set_ylabel('Visual'.upper())
@@ -160,10 +108,7 @@ def plot_tgm_session_day(tgm_dict, measurement = "MSE", save_path = None, trial_
 
     # save the figure
     if save_path:
-        plt.savefig(save_path / f'time_elapsed_tgm_{measurement}_{trial_type}.png', bbox_inches='tight')
-
-
-
+        plt.savefig(save_path / f'time_elapsed_{measurement}_mem_vis.png', bbox_inches='tight')
 
 
 def plot_diagonals(tgm_dict, measurement = "MSE", save_path = None, trial_type = None):
@@ -283,27 +228,12 @@ if __name__ == "__main__":
         save_path.mkdir()
 
     tgm_files = {
-        #"animate_combined_predict_session_number.npy": {"predict": "session number", "task": "combined", "trial_type": "animate"},
-        #"animate_combined_predict_session_day.npy": {"predict": "session day", "task": "combined", "trial_type": "animate"},
-        #"animate_memory_predict_session_number.npy": {"predict": "session number", "task": "memory", "trial_type": "animate"},
         "animate_memory_predict_session_day.npy": {"predict": "session day", "task": "memory", "trial_type": "animate"},
-        #"animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
         "animate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "animate"},
-        #"animate_combined_predict_trial_number.npy": {"predict": "trial number", "task": "combined", "trial_type": "animate"},
-        #"animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
-        #"animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
         }
 
     MSE_dict, correlation_dict = prepare_dicts(tgm_files, path.parent)
     
-    for measurement, dictionary in zip(["correlation"], [correlation_dict]):
-        for trial_type in ["combined"]: #, "memory", "visual"]:
-            tmp_dict = {}
-            for key, value in dictionary.items():
-                if value["params"]["trial_type"] == trial_type:
-                    tmp_dict[key] = value
+    measurement = "correlation"
 
-            plot_tgm_session_day(tmp_dict, measurement=measurement, save_path=save_path, trial_type=trial_type, cmap = "PuOr_r")
-            # plot the results for each trial type
-            #plot_tgm(tmp_dict, measurement=measurement, save_path=save_path, trial_type=trial_type, cmap = "PuOr_r")
-            #plot_diagonals(tmp_dict, measurement=measurement, save_path=save_path, trial_type=trial_type)
+    plot_tgm_session_day(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "PuOr_r")
