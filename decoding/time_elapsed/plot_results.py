@@ -240,21 +240,21 @@ if __name__ == "__main__":
         save_path.mkdir()
 
     tgm_files = {
-        "animate_combined_predict_session_number.npy": {"predict": "session number", "task": "combined", "trial_type": "animate"},
+        #"animate_combined_predict_session_number.npy": {"predict": "session number", "task": "combined", "trial_type": "animate"},
         "animate_combined_predict_session_day.npy": {"predict": "session day", "task": "combined", "trial_type": "animate"},
-        "animate_memory_predict_session_number.npy": {"predict": "session number", "task": "memory", "trial_type": "animate"},
+        #"animate_memory_predict_session_number.npy": {"predict": "session number", "task": "memory", "trial_type": "animate"},
         "animate_memory_predict_session_day.npy": {"predict": "session day", "task": "memory", "trial_type": "animate"},
-        "animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
+        #"animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
         "animate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "animate"},
-        "animate_combined_predict_trial_number.npy": {"predict": "trial number", "task": "combined", "trial_type": "animate"},
-        "animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
-        "animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
+        #"animate_combined_predict_trial_number.npy": {"predict": "trial number", "task": "combined", "trial_type": "animate"},
+        #"animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
+        #"animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
         }
 
     MSE_dict, correlation_dict = prepare_dicts(tgm_files, path.parent)
     
-    for measurement, dictionary in zip(["MSE", "correlation"], [MSE_dict, correlation_dict]):
-        for trial_type in ["animate", "inanimate", "combined"]:
+    for measurement, dictionary in zip(["correlation"], [correlation_dict]):
+        for trial_type in ["combined"]: #, "memory", "visual"]:
             tmp_dict = {}
             for key, value in dictionary.items():
                 if value["params"]["trial_type"] == trial_type:
