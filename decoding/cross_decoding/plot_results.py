@@ -441,6 +441,37 @@ def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
     if save_path:
         plt.savefig(save_path)
 
+
+def average_diagonal_permutation(acc, alpha, save_path = None):
+    """
+
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6), dpi = 300)
+
+    diag = np.diagonal(acc, axis1=0, axis2=1)
+
+    # multiply by 100 to get percentages
+    diag = diag * 100
+
+    ax.plot(diag)
+
+    # plot a dashed line with chance level
+    cl = chance_level(588*11, alpha = alpha, p = 0.5)*100
+
+    ax.plot([0, 250], [cl, cl], linestyle = '--', color = 'k', alpha = 0.5)
+
+    ax.set_xlabel('Time (s)'.upper())
+    ax.set_ylabel('Accuracy (%)'.upper())
+
+    # set x lim
+    ax.set_xlim([0, 250])
+
+    # x axis in seconds
+    x_axis_seconds(ax)
+
+    if save_path:
+        plt.savefig(save_path)
+
 def main_plot_generator():
     accuracies_cross = {} # not including testing and training on the same session
     accuracies = {} # including testing and training on the same session
@@ -454,11 +485,11 @@ def main_plot_generator():
         #plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
 
         # plot all pairs in the of the first 4 sessions in one figure
-        plot_cross_decoding_matrix(accuracies[parc][:3, :3, :, :], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix_first4.png'))
+        #plot_cross_decoding_matrix(accuracies[parc][:3, :3, :, :], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix_first4.png'))
 
         # average over all sessions
-        cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'))
-
+        #cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'))
+        
         # set within session accuracies to nan
         acc1 = accuracies[parc].copy()
         acc1[np.arange(acc1.shape[0]), np.arange(acc1.shape[1]), :, :] = np.nan
@@ -466,13 +497,20 @@ def main_plot_generator():
         accuracies_cross[parc] = acc1
 
         # plot average over all conditions and all cross-session pairs
-        #plt = plot.plot_tgm_fig(np.nanmean(acc1, axis=(0, 1)), vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), )
-        #plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
+
+        # average over cross-session pairs
+        avg = np.nanmean(acc1, axis=(0, 1))
+        plt = plot.plot_tgm_fig(avg, vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
+        plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
+
+        # plot the average over all sessions
+        average_diagonal_permutation(avg, alpha, save_path = os.path.join('plots', f'diagonals_across_perm.png'))
+        
 
         # plot averaged according to conditions and using cross-session pairs
         #plot_train_test_condition(acc1, parc, diff_colour='darkblue')
 
-        plot_train_test_condition_new(acc1, parc, diff_colour='darkblue')
+        #plot_train_test_condition_new(acc1, parc, diff_colour='darkblue')
 
 
     # Diagonals of the parcellations together
