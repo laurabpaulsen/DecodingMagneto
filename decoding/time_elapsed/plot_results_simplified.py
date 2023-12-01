@@ -237,3 +237,6 @@ if __name__ == "__main__":
     measurement = "correlation"
 
     plot_tgm_session_day(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "PuOr_r")
+
+    measurement = "MSE"    
+    plot_tgm_session_day(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "PuOr_r")
