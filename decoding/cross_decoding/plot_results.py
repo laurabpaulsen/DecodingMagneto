@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import seaborn as sns
+from scipy.signal import find_peaks
 
 alpha = 0.05
 
@@ -453,7 +454,23 @@ def average_diagonal_permutation(acc, alpha, save_path = None):
     # multiply by 100 to get percentages
     diag = diag * 100
 
+    # detect peaks 
+    peaks, _ = find_peaks(diag, height = 54, distance = 10)
+
     ax.plot(diag)
+    ax.plot(peaks, diag[peaks], "x", color = 'k')
+
+    time_peaks = peaks/250
+    value_peaks = diag[peaks]
+
+    # detect where significance is reached
+    sig = np.where(diag > chance_level(588*11, alpha = alpha, p = 0.5)*100)[0]
+    sig_time = sig[0]/250
+
+
+    print(f"Time peaks: {time_peaks}")
+    print(f"Value peaks: {value_peaks}")
+    print(f"Time sig: {sig_time}")
 
     # plot a dashed line with chance level
     cl = chance_level(588*11, alpha = alpha, p = 0.5)*100
@@ -468,6 +485,8 @@ def average_diagonal_permutation(acc, alpha, save_path = None):
 
     # x axis in seconds
     x_axis_seconds(ax)
+
+    
 
     if save_path:
         plt.savefig(save_path)

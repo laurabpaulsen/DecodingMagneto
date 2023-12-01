@@ -8,7 +8,7 @@ from tqdm import tqdm
 import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 
-colours = ['#0063B2FF', '#5DBB63FF', 'lightblue']
+colours = ['#9ad8b1', "#9dbde6", '#5DBB63FF']
 
 # set font for all plots
 plt.rcParams['font.family'] = 'sans-serif'
@@ -24,7 +24,7 @@ plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
 
-def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="autumn_r", colourbar = True):
+def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="RdBu_r", colourbar = True):
 
     # plot the results
     if min_val is not None and max_val is not None:
@@ -44,19 +44,15 @@ def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="aut
     return ax
 
 def determine_row_col(params):
-    if params['task'] == 'combined':
+    if params['task'] == 'memory':
         row = 0
-    elif params['task'] == 'memory':
-        row = 1
     elif params['task'] == 'visual':
-        row = 2
+        row = 1
 
-    if params['predict'] == 'session number':
+    if params['predict'] == 'session day':
         col = 0
-    elif params['predict'] == 'session day':
-        col = 1
     elif params['predict'] == 'trial number':
-        col = 2
+        col = 1
 
     return row, col
 
@@ -70,77 +66,115 @@ def flatten_remove_nans(tgm):
     return tgm
 
 
-def plot_tgm_session_day(tgm_dict, measurement = "MSE", save_path = None, trial_type = None, cmap="RdBu_r"):
+
+def plot_tgm_session_day(tgm_dict, measurement="MSE", save_path=None, trial_type = "combined", cmap="RdBu_r"):
     if measurement not in ["MSE", "correlation"]:
         raise ValueError("measurement must be either MSE or correlation")
+    
+    # set up gridspec
+    fig = plt.figure(figsize=(7, 6))
+    gs = fig.add_gridspec(2, 3, hspace=0.2, wspace=0.5, width_ratios=[1, 1, 0.2], height_ratios=[1, 1])
 
-    elif measurement == "correlation":
-        fig, axs = plt.subplots(2, 2, figsize=(7, 6), gridspec_kw={'width_ratios': [1, 0.10]})
+
+
+    # make the other axes
+    axes = []
+    for i in range(2):
+        for j in range(2):
+            fig.add_subplot(gs[i, j])
+            axes.append(plt.gca())
+            
+            
+   
+    #combine the two rows in the last column
+    ax_cbar = fig.add_subplot(gs[:, -1])
+  
+    # only keep combined trial type
+    tgm_dict = {k: v for k, v in tgm_dict.items() if v["params"]["trial_type"] == trial_type}
 
     for key, value in tgm_dict.items():
         params = value["params"]
         tgm = value["tgm"]
 
-        col = 0
-        if params["task"] == "memory":
-            row = 0
-        elif params["task"] == "visual":
-            row = 1
 
-        # plot the results
-        plot_tgm_ax(tgm, axs[row, col], cbar_label='Correlation', min_val=-1, max_val=1, cmap=cmap, colourbar=False)
-            
+        if params["task"] == "visual":
+            if params["predict"] == "session day":
+                ax_im = axes[0]
+            elif params["predict"] == "session number":
+                ax_im = axes[1]
+        elif params["task"] == "memory":
+            if params["predict"] == "session day":
+                ax_im = axes[2]
+            elif params["predict"] == "session number":
+                ax_im = axes[3]
+        else:
+            continue
 
-    axs[0, 0].set_ylabel('Memory'.upper())
-    axs[1, 0].set_ylabel('Visual'.upper())
+        plot_tgm_ax(tgm, ax=ax_im, cbar_label='Correlation', min_val=-1, max_val=1, cmap=cmap, colourbar=False)
+
+    # add titles to the axes
+    axes[0].set_title('Session day')
+    axes[0].set_ylabel("Visual")
+    axes[1].set_title('Session number')
+    axes[2].set_ylabel('Memory')
 
 
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=-1, vmax=1))
-    cax = make_axes_locatable(axs[1, -1]).append_axes("right", pad=0.05, size="100%")
-    cbar = fig.colorbar(sm, cax=cax)
-    cbar.ax.set_ylabel('Correlation', rotation=270, labelpad=15)
+    # Add colorbar to the colorbar axis
+    im = ax_cbar.imshow(np.zeros((250, 250)), origin='lower', cmap=cmap, vmin=-1, vmax=1)
+    cbar = fig.colorbar(im, cax=ax_cbar)
+    cbar.ax.set_ylabel('Correlation', rotation=-90, va="bottom", size=10)
 
-    for ax in axs[:, -1]:
-        ax.set_axis_off()
-
-    # tight layout
-    fig.tight_layout()
+    
 
     # save the figure
     if save_path:
-        plt.savefig(save_path / f'time_elapsed_{measurement}_mem_vis.png', bbox_inches='tight')
+        plt.savefig(save_path / f'time_elapsed_{measurement}_{trial_type}.png', bbox_inches='tight')
 
-
-def plot_diagonals(tgm_dict, measurement = "MSE", save_path = None, trial_type = None):
+def plot_diagonals(tgm_dict, measurement = "MSE", save_path = None, trial_type ="combined"):
     # figure with subplots
-    fig, axs = plt.subplots(3, 1, figsize=(9, 9), sharey=True)
+    fig, ax = plt.subplots(1, 1, figsize=(9, 7), sharey=True)
+    
+    # only keep combined trial type
+    tgm_dict = {k: v for k, v in tgm_dict.items() if v["params"]["trial_type"] == trial_type}
     for key, value in tgm_dict.items():
+
+
         params = value["params"]
         tgm = value["tgm"]
 
         diagonal_values = tgm.diagonal()
-
-        # based on the params determine the row and column of the subplot
-        row, col = determine_row_col(params)
+        if params["predict"] == "trial number":
+            continue
+        if params['task'] == 'memory':
+            colour = colours[0]
+            if params['predict'] == 'session day':
+                line_style = '-'
+            elif params['predict'] == 'session number':
+                line_style = '--'
+        elif params['task'] == 'visual':
+            colour = colours[1]
+            if params['predict'] == 'session day':
+                line_style = '-'
+            elif params['predict'] == 'session number':
+                line_style = '--'
+        else:
+            continue
 
         # plot the results
-        axs[row].plot(diagonal_values, label=params['predict'].upper(), color=colours[col])
+        ax.plot(diagonal_values, colour, linestyle=line_style, label=f'{params["task"]} {params["predict"]}')
 
-        # add titles to the rows
-        axs[0].set_title('Combined'.upper())
-        axs[1].set_title('Memory'.upper())
-        axs[2].set_title('Visual'.upper())
+        ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+        ax.set_xlim(0, 250)
 
-        for ax in axs:
-            ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-            ax.set_xlim(0, 250)
+        # add a horizontal line at 0
+        ax.axhline(y=0, color='k', linestyle='--', linewidth=1)
 
         # add a title to the figure
         fig.supylabel(measurement.upper())
         fig.supxlabel('Time (s)'.upper())
 
         # place legend on the top axis
-        axs[0].legend(loc='upper right')
+        ax.legend(loc='upper right')
 
         # tight layout
         fig.tight_layout()
@@ -171,6 +205,8 @@ def update_params(params, trial_type):
     tmp['trial_type'] = trial_type
 
     return tmp
+
+
 
 
 def prepare_dicts(file_dict, path):
@@ -219,24 +255,49 @@ def prepare_dicts(file_dict, path):
 
 
 if __name__ == "__main__":
-    path = Path(__file__)
+    path = Path(__file__).parent
 
-    save_path = path.parent / 'plots'
+    save_path = path / 'plots'
 
     # ensure that path to save plots exists
     if not save_path.exists():
         save_path.mkdir()
 
+    
     tgm_files = {
+        "animate_combined_predict_session_number.npy": {"predict": "session number", "task": "combined", "trial_type": "animate"},
+        "animate_combined_predict_session_day.npy": {"predict": "session day", "task": "combined", "trial_type": "animate"},
+        "animate_memory_predict_session_number.npy": {"predict": "session number", "task": "memory", "trial_type": "animate"},
         "animate_memory_predict_session_day.npy": {"predict": "session day", "task": "memory", "trial_type": "animate"},
+        "animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
         "animate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "animate"},
+        "animate_combined_predict_trial_number.npy": {"predict": "trial number", "task": "combined", "trial_type": "animate"},
+        "animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
+        "animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
+
         }
 
-    MSE_dict, correlation_dict = prepare_dicts(tgm_files, path.parent)
+    
+    dict_path = path / "dicts"
+    
+    if not dict_path.exists():
+        dict_path.mkdir()
+
+    # takes a while to calculate, so save the results
+    if (dict_path / "MSE_dict.npy").exists() and (dict_path / "correlation_dict.npy").exists():
+        print("Loading MSE and correlation dictionaries from file")
+        MSE_dict = np.load(dict_path / "MSE_dict.npy", allow_pickle=True).item()
+        correlation_dict = np.load(dict_path / "correlation_dict.npy", allow_pickle=True).item()
+    else:
+        MSE_dict, correlation_dict = prepare_dicts(tgm_files, path)
+
+        np.save(dict_path / "MSE_dict.npy", MSE_dict)
+        np.save(dict_path / "correlation_dict.npy", correlation_dict)
+    
     
     measurement = "correlation"
+    plot_tgm_session_day(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "RdBu_r")
+    plot_diagonals(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate")
 
-    plot_tgm_session_day(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "PuOr_r")
-
-    measurement = "MSE"    
-    plot_tgm_session_day(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "PuOr_r")
+    #measurement = "MSE"    
+    #plot_tgm_session_day(MSE_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "PuOr_r")
