@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from scipy.stats import pearsonr
+from scipy.stats import pointbiserialr
 from pandas import to_datetime
 from mne.stats import permutation_cluster_test
 
@@ -91,7 +92,7 @@ def plot_hist_of_corr(ax, corr, bins, color="lightblue", y_lim=(-0.5, 0.5)):
     # limits
     ax.set_ylim(y_lim)
 
-def permute_x_y(X, y, n_perm):
+def permute_x_y(X, y, n_perm, correlation=pearsonr):
      # array for storing actual correlation
     corrs = np.zeros(X.shape[1])
 
@@ -101,7 +102,7 @@ def permute_x_y(X, y, n_perm):
     # loop over time points
     for t in range(X.shape[1]):
         # actual correlation
-        corrs[t], _ = pearsonr(X[:, t], y)
+        corrs[t], _ = correlation(X[:, t], y)
 
     # loop over all permutations
     for n in range(n_perm):
@@ -136,12 +137,12 @@ def permutation_test(X, y, n_perm):
         
     return corrs, permutations_corr, pvals
 
-def cluster_permutation_test_mne(X, y, n_perm):
+def cluster_permutation_test_mne(X, y, n_perm, correlation=pearsonr):
     """
     Uses the MNE python function to conduct a cluster permutation test
     """
 
-    corrs, permutations_corr = permute_x_y(X, y, n_perm)
+    corrs, permutations_corr = permute_x_y(X, y, n_perm, correlation = correlation)
 
     # reshape corrs
     corrs = corrs.reshape(1, -1)
@@ -154,7 +155,7 @@ def cluster_permutation_test_mne(X, y, n_perm):
     
     return corrs, permutations_corr, clusters, cluster_p_values
     
-def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000):
+def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000, correlation=pointbiserialr):
 
     # prep x and y
     dist = get_distance_matrix([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1])
@@ -166,7 +167,7 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
     if not cluster:
         corr, all_perm, pvals = permutation_test(X, y, n_perm)
     else:
-        corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm)
+        corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm, correlation=correlation)
         
         # reshape corr
         corr = corr.reshape(-1)
@@ -208,7 +209,7 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
 
 
     # add y label
-    ax[0].set_ylabel("PEARSON'S R", fontsize=16)
+    ax[0].set_ylabel("Point biserial correlation", fontsize=16)
 
     # add x label
     ax[0].set_xlabel("TIME (s)", fontsize=16)
@@ -218,7 +219,7 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
         plt.savefig(save_path)
 
 
-def plot_corr_hist_no_combined(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000):
+def plot_corr_hist_no_combined(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000, correlation=pearsonr):
     # only memory
     mem_indices = [7, 8, 9, 10]
     mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
@@ -260,7 +261,7 @@ def plot_corr_hist_no_combined(acc, save_path = None, corr_color="C0", perm_colo
             if not cluster:
                 corr, all_perm, pvals = permutation_test(X, y, n_perm)
             else:
-                corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm)
+                corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm, correlation=correlation)
                 
                 # reshape corr
                 corr = corr.reshape(-1)
@@ -294,7 +295,7 @@ def plot_corr_hist_no_combined(acc, save_path = None, corr_color="C0", perm_colo
 
 
     fig.supxlabel("TIME (s)", fontsize=16)
-    fig.supylabel("PEARSON'S R", fontsize=16)
+    fig.supylabel("Pearson's R", fontsize=16)
 
     
     # first column y label
@@ -329,5 +330,6 @@ if __name__ == "__main__":
         acc, 
         save_path=plot_path / "corr_acc_dist_cond.png",
         alpha = alpha,
-        cluster=True
+        cluster=True,
+        correlation=pointbiserialr
         )
