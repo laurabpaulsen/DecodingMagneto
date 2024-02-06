@@ -68,6 +68,43 @@ def plot_corr_toy_example(acc, save_path = None, corr_color="C0", perm_color="li
     if save_path is not None:
         plt.savefig(save_path)
 
+def plot_corr_toy_example_cond(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, timepoint=0):
+
+       
+    # set up figure
+    fig, ax = plt.subplots(1, 1, figsize=(4, 4), dpi=300)
+
+    dist = get_distance_matrix([0, 1, 1])
+
+    # get x and y
+    X, y = prep_x_y(acc, dist)
+
+    annotations = [f"{i+1, j+1}" for i in range(3) for j in range(3) if i != j]
+
+    # plot correlation for the first time point
+    ax.scatter(y, X[:, timepoint], color="k")
+    ax.set_xlabel("Distance")
+    ax.set_ylabel(f"Accuracy (t={timepoint+1})")
+
+    # annotate each point with the session number of both training and testing
+    for i, txt in enumerate(annotations):
+        # get the location of the annotation
+        x_coord = y[i] - 0.5
+        y_coord = X[i, timepoint] - 1/150
+
+        # annotate
+        ax.annotate(txt, (x_coord, y_coord))
+    
+    ax.set_xlim([-1, 2])
+    ax.set_ylim([0.45, 0.55])
+
+
+                
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path)
+
 if __name__ == "__main__":
     path = Path(__file__)
 
@@ -83,3 +120,5 @@ if __name__ == "__main__":
     # plot correlation for toy example
     plot_corr_toy_example(acc, save_path = plot_path / "corr_toy_example.png")
 
+    # plot correlation for toy example with condition
+    plot_corr_toy_example_cond(acc, save_path = plot_path / "corr_toy_example_cond.png")
