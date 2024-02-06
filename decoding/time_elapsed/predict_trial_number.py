@@ -8,7 +8,7 @@ import json
 import sys
 sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
 from utils.data.concatenate import read_and_concate_sessions
-from ridge_fns import tgm_ridge_scores
+from ridge_fns import tgm_ridge_scores, tgm_elasticnet_scores
 
 
 def parse_args():

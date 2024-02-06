@@ -24,13 +24,11 @@ plt.rcParams['figure.titlesize'] = 14
 plt.rcParams['figure.dpi'] = 300
 
 
-def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="RdBu_r", colourbar = True):
+def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="RdBu_r", colourbar = False):
 
     # plot the results
-    if min_val is not None and max_val is not None:
-        im = ax.imshow(tgm, origin='lower', cmap=cmap, vmin=min_val, vmax=max_val)
-    else:
-        im = ax.imshow(tgm, origin='lower', cmap=cmap)
+
+    im = ax.imshow(tgm, origin='lower', cmap=cmap, vmin=min_val, vmax=max_val)
 
     # add colorbar
     if colourbar:
@@ -67,30 +65,29 @@ def flatten_remove_nans(tgm):
 
 
 
-def plot_tgm_session_day(tgm_dict, measurement="MSE", save_path=None, trial_type = "combined", cmap="RdBu_r"):
+def plot_tgm_session_day(tgm_dict, measurement="MSE", save_path=None, trial_type = "animate", cmap="RdBu_r", predict = "session number", min_val=None, max_val=None):
     if measurement not in ["MSE", "correlation"]:
         raise ValueError("measurement must be either MSE or correlation")
     
     # set up gridspec
-    fig = plt.figure(figsize=(7, 6))
-    gs = fig.add_gridspec(2, 3, hspace=0.2, wspace=0.5, width_ratios=[1, 1, 0.2], height_ratios=[1, 1])
+    fig = plt.figure(figsize=(9, 6))
+    gs = fig.add_gridspec(1, 4, hspace=0.2, wspace=0.5, width_ratios=[1, 1, 1, 0.2], height_ratios=[1])
 
 
-
-    # make the other axes
+    # make axes for each task
     axes = []
-    for i in range(2):
-        for j in range(2):
-            fig.add_subplot(gs[i, j])
-            axes.append(plt.gca())
+    for i in range(3):
+        ax = fig.add_subplot(gs[i])
+        axes.append(ax)
             
-            
-   
-    #combine the two rows in the last column
-    ax_cbar = fig.add_subplot(gs[:, -1])
+    # add colorbar axis
+    ax_cbar = fig.add_subplot(gs[-1])
   
-    # only keep combined trial type
+    # only keep the trial type we want (animate or inanimate)
     tgm_dict = {k: v for k, v in tgm_dict.items() if v["params"]["trial_type"] == trial_type}
+
+    # only keep the predict we want (session day, session number, or trial number)
+    tgm_dict = {k: v for k, v in tgm_dict.items() if v["params"]["predict"] == predict}
 
     for key, value in tgm_dict.items():
         params = value["params"]
@@ -98,90 +95,41 @@ def plot_tgm_session_day(tgm_dict, measurement="MSE", save_path=None, trial_type
 
 
         if params["task"] == "visual":
-            if params["predict"] == "session day":
-                ax_im = axes[0]
-            elif params["predict"] == "session number":
-                ax_im = axes[1]
+            ax_im = axes[0]
+            ax_im.set_title("Visual")
+
         elif params["task"] == "memory":
-            if params["predict"] == "session day":
-                ax_im = axes[2]
-            elif params["predict"] == "session number":
-                ax_im = axes[3]
+            ax_im = axes[1]
+            ax_im.set_title("Memory")
+
+        elif params["task"] == "combined":
+            ax_im = axes[2]
+            ax_im.set_title("Combined")
+
         else:
             continue
 
-        plot_tgm_ax(tgm, ax=ax_im, cbar_label='Correlation', min_val=-1, max_val=1, cmap=cmap, colourbar=False)
+        plot_tgm_ax(tgm, ax=ax_im, cbar_label=measurement, min_val=min_val, max_val=max_val, cmap=cmap)
 
-    # add titles to the axes
-    axes[0].set_title('Session day')
-    axes[0].set_ylabel("Visual")
-    axes[1].set_title('Session number')
-    axes[2].set_ylabel('Memory')
+        # print the max value
+        print(f'{key}: {tgm.max()}')
 
 
     # Add colorbar to the colorbar axis
-    im = ax_cbar.imshow(np.zeros((250, 250)), origin='lower', cmap=cmap, vmin=-1, vmax=1)
-    cbar = fig.colorbar(im, cax=ax_cbar)
-    cbar.ax.set_ylabel('Correlation', rotation=-90, va="bottom", size=10)
+    im = ax_cbar.imshow(np.zeros((250, 250)), origin='lower', cmap=cmap, vmin=min_val, vmax=max_val)
+    cbar = fig.colorbar(im, cax=ax_cbar, fraction=2)
+    cbar.ax.set_ylabel(measurement.title(), rotation=-90, va="bottom", size=10)
 
-    
+    # add more ticks to the colorbar
+    if measurement == "correlation":
+        cbar.ax.set_yticks(np.arange(-1, 1.1, step=0.5))
+
 
     # save the figure
     if save_path:
-        plt.savefig(save_path / f'time_elapsed_{measurement}_{trial_type}.png', bbox_inches='tight')
-
-def plot_diagonals(tgm_dict, measurement = "MSE", save_path = None, trial_type ="combined"):
-    # figure with subplots
-    fig, ax = plt.subplots(1, 1, figsize=(9, 7), sharey=True)
-    
-    # only keep combined trial type
-    tgm_dict = {k: v for k, v in tgm_dict.items() if v["params"]["trial_type"] == trial_type}
-    for key, value in tgm_dict.items():
+        plt.savefig(save_path, bbox_inches='tight')
 
 
-        params = value["params"]
-        tgm = value["tgm"]
-
-        diagonal_values = tgm.diagonal()
-        if params["predict"] == "trial number":
-            continue
-        if params['task'] == 'memory':
-            colour = colours[0]
-            if params['predict'] == 'session day':
-                line_style = '-'
-            elif params['predict'] == 'session number':
-                line_style = '--'
-        elif params['task'] == 'visual':
-            colour = colours[1]
-            if params['predict'] == 'session day':
-                line_style = '-'
-            elif params['predict'] == 'session number':
-                line_style = '--'
-        else:
-            continue
-
-        # plot the results
-        ax.plot(diagonal_values, colour, linestyle=line_style, label=f'{params["task"]} {params["predict"]}')
-
-        ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-        ax.set_xlim(0, 250)
-
-        # add a horizontal line at 0
-        ax.axhline(y=0, color='k', linestyle='--', linewidth=1)
-
-        # add a title to the figure
-        fig.supylabel(measurement.upper())
-        fig.supxlabel('Time (s)'.upper())
-
-        # place legend on the top axis
-        ax.legend(loc='upper right')
-
-        # tight layout
-        fig.tight_layout()
-
-        # save the figure
-        if save_path:
-            plt.savefig(save_path /f'time_elapsed_diagonal_{measurement}_{trial_type}.png', bbox_inches='tight')
 
 def return_file_paths(path, file):
     """
@@ -205,8 +153,6 @@ def update_params(params, trial_type):
     tmp['trial_type'] = trial_type
 
     return tmp
-
-
 
 
 def prepare_dicts(file_dict, path):
@@ -296,8 +242,27 @@ if __name__ == "__main__":
     
     
     measurement = "correlation"
-    plot_tgm_session_day(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "RdBu_r")
-    plot_diagonals(correlation_dict, measurement=measurement, save_path=save_path, trial_type="animate")
+    trial_type = "animate"
+    predict = "session day"
+    
+    plot_tgm_session_day(
+        correlation_dict, 
+        measurement=measurement, 
+        save_path=save_path / f'time_elapsed_{measurement}_{trial_type}_{predict.replace(" ", "")}.png',
+        predict=predict,
+        trial_type=trial_type, 
+        min_val=-1,
+        max_val=1,
+        cmap = "RdBu_r")
 
-    #measurement = "MSE"    
-    #plot_tgm_session_day(MSE_dict, measurement=measurement, save_path=save_path, trial_type="animate", cmap = "PuOr_r")
+    predict = "session number"
+    plot_tgm_session_day(
+        correlation_dict, 
+        measurement=measurement, 
+        predict=predict,
+        save_path=save_path / f'time_elapsed_{measurement}_{trial_type}_{predict.replace(" ", "")}.png',
+        trial_type=trial_type, 
+        min_val=-1,
+        max_val=1,
+        cmap = "RdBu_r")
+
