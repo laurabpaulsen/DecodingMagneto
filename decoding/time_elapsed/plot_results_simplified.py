@@ -36,8 +36,8 @@ def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="RdB
         cbar.ax.set_ylabel(cbar_label, rotation=-90, va="bottom", size=10)
         cbar.ax.ticklabel_format(useOffset=False, style = 'plain')
 
-    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ], size = 7)
+    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ], size = 7)
 
     return ax
 
