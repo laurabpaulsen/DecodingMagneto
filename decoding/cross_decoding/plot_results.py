@@ -443,7 +443,7 @@ def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
         plt.savefig(save_path)
 
 
-def average_diagonal_permutation(acc, alpha, save_path = None):
+def average_diagonal(acc, alpha, acc_pair = None, save_path = None):
     """
 
     """
@@ -453,6 +453,13 @@ def average_diagonal_permutation(acc, alpha, save_path = None):
 
     # multiply by 100 to get percentages
     diag = diag * 100
+
+    for i in range(acc_pair.shape[0]):
+        for j in range(acc_pair.shape[1]):
+            if i == j:
+                continue
+            else:
+                ax.plot(np.diagonal(acc_pair[i, j], axis1=0, axis2=1)*100, color = 'lightblue', alpha = 0.1)
 
     # detect peaks 
     peaks, _ = find_peaks(diag, height = 54, distance = 10)
@@ -466,6 +473,7 @@ def average_diagonal_permutation(acc, alpha, save_path = None):
     # detect where significance is reached
     sig = np.where(diag > chance_level(588*11, alpha = alpha, p = 0.5)*100)[0]
     sig_time = sig[0]/250
+
 
 
     print(f"Time peaks: {time_peaks}")
@@ -486,20 +494,67 @@ def average_diagonal_permutation(acc, alpha, save_path = None):
     # x axis in seconds
     x_axis_seconds(ax)
 
-    
 
     if save_path:
         plt.savefig(save_path)
 
+
+def average_diagonal_within(acc, alpha, acc_pair = None, save_path = None):
+    """
+
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6), dpi = 300)
+
+    diag = np.diagonal(acc, axis1=0, axis2=1)
+
+    # multiply by 100 to get percentages
+    diag = diag * 100
+
+    for i in range(acc_pair.shape[2]):
+        ax.plot(np.diagonal(acc_pair[:, :, i], axis1=0, axis2=1)*100, color = 'lightblue', alpha = 0.2)
+
+    # detect peaks 
+    peaks, _ = find_peaks(diag, height = 54, distance = 10)
+
+    ax.plot(diag)
+    ax.plot(peaks, diag[peaks], "x", color = 'k')
+
+    time_peaks = peaks/250
+    value_peaks = diag[peaks]
+
+
+    # plot a dashed line with chance level
+    cl = chance_level(588*11, alpha = alpha, p = 0.5)*100
+
+    ax.plot([0, 250], [cl, cl], linestyle = '--', color = 'k', alpha = 0.5)
+
+    ax.set_xlabel('Time (s)'.upper())
+    ax.set_ylabel('Accuracy (%)'.upper())
+
+    # set x lim
+    ax.set_xlim([0, 250])
+
+    # x axis in seconds
+    x_axis_seconds(ax)
+
+
+    if save_path:
+        plt.savefig(save_path)
+
+
 def main_plot_generator():
     accuracies_cross = {} # not including testing and training on the same session
     accuracies = {} # including testing and training on the same session
+    accuracies_within = {} # only testing and training on the same session
 
     for parc in ["sens"]:#, "HCPMMP1"]: #['aparc','aparc.DKTatlas', 'aparc.a2009s', 'sens', 'HCPMMP1']:
         
         # read in results
         accuracies[parc] = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
-        print(accuracies[parc].shape)
+        accuracies_within[parc] = np.diagonal(accuracies[parc], axis1=0, axis2=1)
+        print(accuracies_within[parc].shape)
+
+
         # plot all pairs of sessions in one figure
         #plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
 
@@ -519,12 +574,30 @@ def main_plot_generator():
 
         # average over cross-session pairs
         avg = np.nanmean(acc1, axis=(0, 1))
+
         plt = plot.plot_tgm_fig(avg, vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
         plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
 
         # plot the average over all sessions
-        average_diagonal_permutation(avg, alpha, save_path = os.path.join('plots', f'diagonals_across_perm.png'))
+        average_diagonal(
+            avg,
+            alpha,
+            acc_pair=accuracies_cross[parc],
+            save_path = os.path.join('plots', f'diagonals_across.png'))
         
+        # plot the within session diagonals
+
+        # average within session pairs
+        avg_within = np.nanmean(accuracies_within[parc], axis = -1)
+        
+        average_diagonal_within(
+            avg_within,
+            alpha,
+            acc_pair=accuracies_within[parc],
+            save_path = os.path.join('plots', f'diagonals_within.png'))
+
+        plt = plot.plot_tgm_fig(avg_within, vmin=30, vmax=70, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
+        plt.savefig(os.path.join('plots', f'within_decoding_{parc}_average.png'))
 
         # plot averaged according to conditions and using cross-session pairs
         #plot_train_test_condition(acc1, parc, diff_colour='darkblue')
