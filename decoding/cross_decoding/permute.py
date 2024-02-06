@@ -65,6 +65,7 @@ def get_accuracy(Xs:list, ys:list, decoder:Decoder, input:tuple):
     start = perf_counter()
 
     (ind_train, ind_test, idx) = input # unpacking input tuple
+    print(f'Running decoding index {idx} with train session {ind_train} and test session {ind_test}')
 
     if ind_test == ind_train: # avoiding double dipping within session, by using within session decoder
         accuracy = decoder.run_decoding(Xs[ind_train], ys[ind_train])
