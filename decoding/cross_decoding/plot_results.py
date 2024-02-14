@@ -146,7 +146,7 @@ def add_dif_label(ax, label, colour = 'red'):
 def add_tgm_label(ax, label, colour = 'black'):
     ax.text(-0.05, 1.05, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
 
-def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
+def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
     fig, axs = plt.subplots(3, 3, figsize = (14, 12), dpi = 300, gridspec_kw={'height_ratios': [1, 1, 0.20]})
     
     vis = np.array([0, 1, 2, 3, 4, 5, 6])
@@ -191,6 +191,12 @@ def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour =
     plot.plot_tgm_ax(mem_mem - vis_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff, title = '(memory -> memory) \n - (visual -> memory)')
     plot_sig_clusters(axs[1, 2], "vismem_memmem")
 
+    if sig_inds:
+        for ax in [axs[0, 2], axs[1, 2]]:
+            for ind in sig_inds:
+                ax.add_patch(plt.Rectangle((ind[0], ind[0]), ind[1]-ind[0], ind[1]-ind[0], fill = False, edgecolor = 'black', linewidth = 1))
+            
+
 
     for ax in [axs[1,2], axs[0, 2]]:
         x_axis_seconds(ax)
@@ -232,7 +238,7 @@ def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour =
 
 
 
-def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue'):
+def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
     fig, axs = plt.subplots(4, 3, figsize = (12, 12*4/3), dpi = 300)
     
     vis = np.array([0, 1, 2, 3, 4, 5, 6])
@@ -307,6 +313,10 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
         x_axis_seconds(ax)
         change_spine_colour(ax, diff_colour)
         add_diagonal_line(ax, colour = diff_colour)
+
+        if sig_inds:
+            for ind in sig_inds:
+                ax.add_patch(plt.Rectangle((ind[0], ind[0]), ind[1]-ind[0], ind[1]-ind[0], fill = False, edgecolor = 'black', linewidth = 1))
 
     # plot colourbars in the first two columns of the first row
     colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
@@ -615,9 +625,10 @@ def main_plot_generator():
         
         
         # plot averaged according to conditions and using cross-session pairs
-        #plot_train_test_condition(acc1, parc, diff_colour='darkblue')
+        plot_train_test_condition(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 111], [153,190]])
 
-        #plot_train_test_condition_new(acc1, parc, diff_colour='darkblue')
+        plot_train_test_condition_new(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 111], [153,190]])
+
 
 
     # Diagonals of the parcellations together
