@@ -187,6 +187,8 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
         # set pvals of significant time points to 0
         pvals[sig_timepoints] = 0
 
+    print(sig_timepoints)
+
 
     # set up figure
     gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1], wspace=0.01, hspace=0.3)
@@ -195,9 +197,9 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
     bin_range = (-0.5, 0.5)
     bins = np.linspace(bin_range[0], bin_range[1], 20)
 
-    # plot permutations
+    # plot permutations with alpha according
     for perm in all_perm:
-        ax[0].plot(perm, color=perm_color, linewidth=0.5, alpha=0.4)
+        ax[0].plot(perm, color=perm_color, linewidth=0.5, alpha=0.05)
 
     plot_corr(ax[0], corr, pvals, alpha = alpha, color=corr_color)
     
@@ -278,6 +280,8 @@ def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue
                 sig_timepoints = np.concatenate([clusters[i][0] for i in sig_clusters_idx])
             except:
                 sig_timepoints = []
+
+            print(sig_timepoints)
             
             # get pvals
             pvals = np.ones(X.shape[1])
@@ -323,20 +327,20 @@ if __name__ == "__main__":
     alpha = 0.05
 
     distance = "days"
-    plot_corr_hist(
-        acc = acc, 
-        distance=distance,
-        save_path = plot_path / f"corr_acc_dist_{distance}.png",
-        alpha = alpha,
-        cluster=True)
+    #plot_corr_hist(
+    #    acc = acc, 
+    #    distance=distance,
+    #    save_path = plot_path / f"corr_acc_dist_{distance}.png",
+    #    alpha = alpha,
+    #    cluster=True)
     
     distance = "session"
-    plot_corr_hist(
-        acc = acc, 
-        distance=distance,
-        save_path = plot_path / f"corr_acc_dist_{distance}.png",
-        alpha = alpha,
-        cluster=True)
+    #plot_corr_hist(
+    #    acc = acc, 
+    #    distance=distance,
+    #    save_path = plot_path / f"corr_acc_dist_{distance}.png",
+    #    alpha = alpha,
+    #    cluster=True)
 
     plot_corr_hist_cond(
         acc, 
