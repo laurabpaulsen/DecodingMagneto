@@ -625,9 +625,9 @@ def main_plot_generator():
         
         
         # plot averaged according to conditions and using cross-session pairs
-        plot_train_test_condition(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 111], [153,190]])
+        plot_train_test_condition(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 96], [153,190]])
 
-        plot_train_test_condition_new(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 111], [153,190]])
+        plot_train_test_condition_new(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 96], [153,190]])
 
 
 
