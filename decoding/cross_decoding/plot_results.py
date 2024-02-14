@@ -443,7 +443,7 @@ def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
         plt.savefig(save_path)
 
 
-def average_diagonal(acc, alpha, acc_pair = None, save_path = None):
+def average_diagonal(acc, alpha = None, acc_pair = None, save_path = None):
     """
 
     """
@@ -454,12 +454,13 @@ def average_diagonal(acc, alpha, acc_pair = None, save_path = None):
     # multiply by 100 to get percentages
     diag = diag * 100
 
-    for i in range(acc_pair.shape[0]):
-        for j in range(acc_pair.shape[1]):
-            if i == j:
-                continue
-            else:
-                ax.plot(np.diagonal(acc_pair[i, j], axis1=0, axis2=1)*100, color = 'lightblue', alpha = 0.1)
+    if acc_pair is not None:
+        for i in range(acc_pair.shape[0]):
+            for j in range(acc_pair.shape[1]):
+                if i == j:
+                    continue
+                else:
+                    ax.plot(np.diagonal(acc_pair[i, j], axis1=0, axis2=1)*100, color = 'lightblue', alpha = 0.1)
 
     # detect peaks 
     peaks, _ = find_peaks(diag, height = 54, distance = 10)
@@ -470,20 +471,20 @@ def average_diagonal(acc, alpha, acc_pair = None, save_path = None):
     time_peaks = peaks/250
     value_peaks = diag[peaks]
 
-    # detect where significance is reached
-    sig = np.where(diag > chance_level(588*11, alpha = alpha, p = 0.5)*100)[0]
-    sig_time = sig[0]/250
+    if alpha:
+        # detect where significance is reached
+        sig = np.where(diag > chance_level(588*11, alpha = alpha, p = 0.5)*100)[0]
+        sig_time = sig[0]/250
 
 
 
-    print(f"Time peaks: {time_peaks}")
-    print(f"Value peaks: {value_peaks}")
-    print(f"Time sig: {sig_time}")
+        print(f"Time peaks: {time_peaks}")
+        print(f"Value peaks: {value_peaks}")
+        print(f"Time sig: {sig_time}")
+        # plot a dashed line with chance level
+        cl = chance_level(588*11, alpha = alpha, p = 0.5)*100
 
-    # plot a dashed line with chance level
-    cl = chance_level(588*11, alpha = alpha, p = 0.5)*100
-
-    ax.plot([0, 250], [cl, cl], linestyle = '--', color = 'k', alpha = 0.5)
+        ax.plot([0, 250], [cl, cl], linestyle = '--', color = 'k', alpha = 0.5)
 
     ax.set_xlabel('Time (s)'.upper())
     ax.set_ylabel('Accuracy (%)'.upper())
@@ -499,7 +500,7 @@ def average_diagonal(acc, alpha, acc_pair = None, save_path = None):
         plt.savefig(save_path)
 
 
-def average_diagonal_within(acc, alpha, acc_pair = None, save_path = None):
+def average_diagonal_within(acc, alpha = None, acc_pair = None, save_path = None):
     """
 
     """
@@ -509,9 +510,9 @@ def average_diagonal_within(acc, alpha, acc_pair = None, save_path = None):
 
     # multiply by 100 to get percentages
     diag = diag * 100
-
-    for i in range(acc_pair.shape[2]):
-        ax.plot(np.diagonal(acc_pair[:, :, i], axis1=0, axis2=1)*100, color = 'lightblue', alpha = 0.2)
+    if acc_pair is not None:
+        for i in range(acc_pair.shape[2]):
+            ax.plot(np.diagonal(acc_pair[:, :, i], axis1=0, axis2=1)*100, color = 'lightblue', alpha = 0.2)
 
     # detect peaks 
     peaks, _ = find_peaks(diag, height = 54, distance = 10)
@@ -524,9 +525,10 @@ def average_diagonal_within(acc, alpha, acc_pair = None, save_path = None):
 
 
     # plot a dashed line with chance level
-    cl = chance_level(588*11, alpha = alpha, p = 0.5)*100
+    if alpha:
+        cl = chance_level(588*11, alpha = alpha, p = 0.5)*100
 
-    ax.plot([0, 250], [cl, cl], linestyle = '--', color = 'k', alpha = 0.5)
+        ax.plot([0, 250], [cl, cl], linestyle = '--', color = 'k', alpha = 0.5)
 
     ax.set_xlabel('Time (s)'.upper())
     ax.set_ylabel('Accuracy (%)'.upper())
@@ -552,7 +554,6 @@ def main_plot_generator():
         # read in results
         accuracies[parc] = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
         accuracies_within[parc] = np.diagonal(accuracies[parc], axis1=0, axis2=1)
-        print(accuracies_within[parc].shape)
 
 
         # plot all pairs of sessions in one figure
@@ -575,7 +576,7 @@ def main_plot_generator():
         # average over cross-session pairs
         avg = np.nanmean(acc1, axis=(0, 1))
 
-        plt = plot.plot_tgm_fig(avg, vmin=40, vmax=60, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
+        plt = plot.plot_tgm_fig(avg, vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
         plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
 
         # plot the average over all sessions
@@ -596,9 +597,23 @@ def main_plot_generator():
             acc_pair=accuracies_within[parc],
             save_path = os.path.join('plots', f'diagonals_within.png'))
 
-        plt = plot.plot_tgm_fig(avg_within, vmin=30, vmax=70, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
+        plt = plot.plot_tgm_fig(avg_within, vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
         plt.savefig(os.path.join('plots', f'within_decoding_{parc}_average.png'))
 
+
+        # plot the difference between within and cross session pairs
+        difference = avg - avg_within
+        plt = plot.plot_tgm_fig(difference, vmin=-6, vmax=6, cmap = "PuOr_r", cbar_loc='right')
+
+        plt.savefig(os.path.join('plots', f'difference_decoding_{parc}_average.png'))
+
+        # diagonal of the difference
+        average_diagonal(
+            difference,
+            save_path = os.path.join('plots', f'diagonals_difference.png'))
+
+        
+        
         # plot averaged according to conditions and using cross-session pairs
         #plot_train_test_condition(acc1, parc, diff_colour='darkblue')
 
