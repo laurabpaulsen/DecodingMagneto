@@ -60,13 +60,13 @@ def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = F
 
 
 
-def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None, title = None, cbar_loc = "top", linewitdh = 0.5):
+def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None, title = None, cbar_loc = "top", linewitdh = 0.5, cmap = 'RdBu_r'):
     if not X.shape == (250, 250):
         raise ValueError('X must be 250, 250')
 
     fig, ax = plt.subplots(1, 1, figsize = (7, 7), dpi = 400)
 
-    im = ax.imshow(X*100, vmin = vmin, vmax = vmax, origin = 'lower')
+    im = ax.imshow(X*100, vmin = vmin, vmax = vmax, origin = 'lower', cmap = cmap)
     if chance_level is not None:
         plt.contour(X*100, levels=[chance_level*100], colors='k', alpha = 0.5, linewidths=linewitdh)
 
