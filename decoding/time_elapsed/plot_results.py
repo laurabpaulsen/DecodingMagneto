@@ -71,12 +71,12 @@ def plot_tgm_session_day(tgm_dict, measurement="MSE", save_path=None, trial_type
     
     # set up gridspec
     fig = plt.figure(figsize=(9, 6))
-    gs = fig.add_gridspec(1, 4, hspace=0.2, wspace=0.5, width_ratios=[1, 1, 1, 0.2], height_ratios=[1])
+    gs = fig.add_gridspec(1, 3, hspace=0.2, wspace=0.5, width_ratios=[1, 1, 0.2], height_ratios=[1])
 
 
     # make axes for each task
     axes = []
-    for i in range(3):
+    for i in range(2):
         ax = fig.add_subplot(gs[i])
         axes.append(ax)
             
@@ -101,10 +101,6 @@ def plot_tgm_session_day(tgm_dict, measurement="MSE", save_path=None, trial_type
         elif params["task"] == "memory":
             ax_im = axes[1]
             ax_im.set_title("Memory")
-
-        elif params["task"] == "combined":
-            ax_im = axes[2]
-            ax_im.set_title("Combined")
 
         else:
             continue
@@ -136,11 +132,11 @@ def return_file_paths(path, file):
     Returns file paths for animate and inanimate versions of the same file, both the predicted and true values
     """
 
-    animate_file = path / 'results' / file
-    inanimate_file = path / 'results' / file.replace('animate', 'inanimate')
+    animate_file = path / 'results_shuffled' / file
+    inanimate_file = path / 'results_shuffled' / file.replace('animate', 'inanimate')
 
-    animate_true_file = path / 'results' / file.replace('predict', 'true')
-    inanimate_true_file = path / 'results' / file.replace('animate', 'inanimate').replace('predict', 'true')
+    animate_true_file = path / 'results_shuffled' / file.replace('predict', 'true')
+    inanimate_true_file = path / 'results_shuffled' / file.replace('animate', 'inanimate').replace('predict', 'true')
 
     return animate_file, inanimate_file, animate_true_file, inanimate_true_file
     
@@ -169,11 +165,9 @@ def prepare_dicts(file_dict, path):
         predicted_inanimate = np.load(inanimate_file, allow_pickle=True)
         true_inanimate = np.load(inanimate_true_file, allow_pickle=True)
 
-        # combine the animate and inanimate results by concatenating them along the last axis
-        predicted_combined = np.concatenate((predicted_animate.copy(), predicted_inanimate.copy()), axis=-1)
-        true_combined = np.concatenate((true_animate.copy(), true_inanimate.copy()), axis=-1)
 
-        for trial_type, (predicted, true) in zip(["animate", "inanimate", "combined"], [(predicted_animate, true_animate), (predicted_inanimate, true_inanimate), (predicted_combined, true_combined)]):
+
+        for trial_type, (predicted, true) in zip(["animate", "inanimate"], [(predicted_animate, true_animate), (predicted_inanimate, true_inanimate)]):
             # get the MSE and correlation between the predicted and true values for each timepoint
             MSE_tgm = np.zeros((250, 250))
             correlation_tgm = np.zeros((250, 250))
@@ -203,7 +197,7 @@ def prepare_dicts(file_dict, path):
 if __name__ == "__main__":
     path = Path(__file__).parent
 
-    save_path = path / 'plots'
+    save_path = path / 'plots_shuffled'
 
     # ensure that path to save plots exists
     if not save_path.exists():
@@ -211,20 +205,17 @@ if __name__ == "__main__":
 
     
     tgm_files = {
-        "animate_combined_predict_session_number.npy": {"predict": "session number", "task": "combined", "trial_type": "animate"},
-        "animate_combined_predict_session_day.npy": {"predict": "session day", "task": "combined", "trial_type": "animate"},
-        "animate_memory_predict_session_number.npy": {"predict": "session number", "task": "memory", "trial_type": "animate"},
+        #"animate_memory_predict_session_number.npy": {"predict": "session number", "task": "memory", "trial_type": "animate"},
         "animate_memory_predict_session_day.npy": {"predict": "session day", "task": "memory", "trial_type": "animate"},
-        "animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
+        #"animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
         "animate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "animate"},
-        "animate_combined_predict_trial_number.npy": {"predict": "trial number", "task": "combined", "trial_type": "animate"},
-        "animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
-        "animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
+        #"animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
+        #"animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
 
         }
 
     
-    dict_path = path / "dicts"
+    dict_path = path / "dicts_shuffled"
     
     if not dict_path.exists():
         dict_path.mkdir()
