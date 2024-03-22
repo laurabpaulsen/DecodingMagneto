@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from tqdm import tqdm
+import pickle as pkl
+
 
 # local imports
 import sys
@@ -65,66 +66,6 @@ def flatten_remove_nans(tgm):
 
 
 
-def plot_tgm_session_day(tgm_dict, measurement="MSE", save_path=None, trial_type = "animate", cmap="RdBu_r", predict = "session number", min_val=None, max_val=None):
-    if measurement not in ["MSE", "correlation"]:
-        raise ValueError("measurement must be either MSE or correlation")
-    
-    # set up gridspec
-    fig = plt.figure(figsize=(9, 6))
-    gs = fig.add_gridspec(1, 3, hspace=0.2, wspace=0.5, width_ratios=[1, 1, 0.2], height_ratios=[1])
-
-
-    # make axes for each task
-    axes = []
-    for i in range(2):
-        ax = fig.add_subplot(gs[i])
-        axes.append(ax)
-            
-    # add colorbar axis
-    ax_cbar = fig.add_subplot(gs[-1])
-  
-    # only keep the trial type we want (animate or inanimate)
-    tgm_dict = {k: v for k, v in tgm_dict.items() if v["params"]["trial_type"] == trial_type}
-
-    # only keep the predict we want (session day, session number, or trial number)
-    tgm_dict = {k: v for k, v in tgm_dict.items() if v["params"]["predict"] == predict}
-
-    for key, value in tgm_dict.items():
-        params = value["params"]
-        tgm = value["tgm"]
-
-
-        if params["task"] == "visual":
-            ax_im = axes[0]
-            ax_im.set_title("Visual")
-
-        elif params["task"] == "memory":
-            ax_im = axes[1]
-            ax_im.set_title("Memory")
-
-        else:
-            continue
-
-        plot_tgm_ax(tgm, ax=ax_im, cbar_label=measurement, min_val=min_val, max_val=max_val, cmap=cmap)
-
-        # print the max value
-        print(f'{key}: {tgm.max()}')
-
-
-    # Add colorbar to the colorbar axis
-    im = ax_cbar.imshow(np.zeros((250, 250)), origin='lower', cmap=cmap, vmin=min_val, vmax=max_val)
-    cbar = fig.colorbar(im, cax=ax_cbar, fraction=2)
-    cbar.ax.set_ylabel(measurement.title(), rotation=-90, va="bottom", size=10)
-
-    # add more ticks to the colorbar
-    if measurement == "correlation":
-        cbar.ax.set_yticks(np.arange(-1, 1.1, step=0.5))
-
-
-    # save the figure
-    if save_path:
-        plt.savefig(save_path, bbox_inches='tight')
-
 
 
 def return_file_paths(path, file):
@@ -132,13 +73,11 @@ def return_file_paths(path, file):
     Returns file paths for animate and inanimate versions of the same file, both the predicted and true values
     """
 
-    animate_file = path / 'results_shuffled' / file
-    inanimate_file = path / 'results_shuffled' / file.replace('animate', 'inanimate')
+    animate_file = path / 'results' / file
+    inanimate_file = path / 'results' / file.replace('animate', 'inanimate')
 
-    animate_true_file = path / 'results_shuffled' / file.replace('predict', 'true')
-    inanimate_true_file = path / 'results_shuffled' / file.replace('animate', 'inanimate').replace('predict', 'true')
+    return animate_file, inanimate_file, 
 
-    return animate_file, inanimate_file, animate_true_file, inanimate_true_file
     
 
 def update_params(params, trial_type):
@@ -151,53 +90,125 @@ def update_params(params, trial_type):
     return tmp
 
 
+def get_correlation_tgm(predicted, true):
+    """
+    Calculate the correlation between the predicted and true values for each timepoint
+    """
+    correlation_tgm = np.zeros((250, 250))
+    for i in range(250):
+        for j in range(250):
+            # take only the non-nan values and flatten the array
+            tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
+            tmp_true = flatten_remove_nans(true[i, j, :, :])
+
+            # calculate the correlation
+            correlation_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
+
+    return correlation_tgm
+
+
 def prepare_dicts(file_dict, path):
-    MSE_dict = {}
-    correlation_dict = {}
 
-    for f, params in tqdm(file_dict.items(), desc="Preparing dictionaries with correlation and MSE results"):
-        animate_file, inanimate_file, animate_true_file, inanimate_true_file = return_file_paths(path, f)
+    output_all = {}
+    for f, params in tqdm(file_dict.items(), desc="Preparing dictionaries with correlation results"):
+        animate_file, inanimate_file = return_file_paths(path, f)
 
-        predicted_animate = np.load(animate_file, allow_pickle=True)
-        true_animate = np.load(animate_true_file, allow_pickle=True)
+        animate = pkl.load(open(animate_file, "rb"))
+        inanimate = pkl.load(open(inanimate_file, "rb"))
 
-        # to get the inanimate results, we need to swap the animate and inanimate labels
-        predicted_inanimate = np.load(inanimate_file, allow_pickle=True)
-        true_inanimate = np.load(inanimate_true_file, allow_pickle=True)
+        for trial_type, results in zip(["animate", "inanimate"], [animate, inanimate]):
 
-
-
-        for trial_type, (predicted, true) in zip(["animate", "inanimate"], [(predicted_animate, true_animate), (predicted_inanimate, true_inanimate)]):
-            # get the MSE and correlation between the predicted and true values for each timepoint
-            MSE_tgm = np.zeros((250, 250))
-            correlation_tgm = np.zeros((250, 250))
-            
-            for i in range(250):
-                for j in range(250):
-                    # take only the non-nan values and flatten the array
-                    tmp_predicted = flatten_remove_nans(predicted[i, j, :, :])
-                    tmp_true = flatten_remove_nans(true[i, j, :, :])
-
-                    # calculate the mean squared error
-                    MSE_tgm[i, j] = np.mean((tmp_predicted - tmp_true)**2)
-                    correlation_tgm[i, j] = np.corrcoef(tmp_predicted, tmp_true)[0, 1]
-
-            # change params to reflect the trial type and the file name
             tmp_params = update_params(params, trial_type)
             f_tmp = f.replace("animate", trial_type)
+            
+            # loop over the results and permuted results
+            output_tmp = {}
+            for key, value in results.items():
+                if key == "original":
+                    permutation = "original"
 
-            # save the tgm
-            MSE_dict[f_tmp] = {"tgm": MSE_tgm, "params": tmp_params}
-            correlation_dict[f_tmp] = {"tgm": correlation_tgm, "params": tmp_params}
+                else:
+                    permutation = value["correlation"]
 
-    return MSE_dict, correlation_dict
 
+                # get correlation between the predicted and true values for each timepoint
+                correlation_tgm = get_correlation_tgm(value["predicted"], value["true"])
+
+                # add to the output dictionary
+                output_tmp[key] = {
+                    "params": tmp_params,
+                    "corr_permutation_y_true_y": permutation,
+                    "tgm": correlation_tgm
+                }
+
+            output_all[f_tmp] = output_tmp
+
+    return output_all
+
+
+
+def plot_results(tgm_dict, save_path=None, trial_type="animate", session_type="memory", cmap="RdBu_r", predict="session number", min_val=-1, max_val=1):    
+    tmp_dict = {}
+
+    for key, value in tgm_dict.items():
+        for key2, value2 in value.items():
+            params = value2["params"]
+
+
+            if params["trial_type"] == trial_type and params["predict"] == predict and params["task"] == session_type:
+                tmp_dict[key2] = value2
+
+    fig = plt.figure(figsize=(8, 12), dpi=300)
+    gs = plt.GridSpec(4, 3, figure=fig, hspace=0.5, wspace=0.5, width_ratios=[1, 1, 1], height_ratios=[2, 1, 1, 1])
+
+
+     # the two top rows are used for the unpermuted results
+    ax_original = fig.add_subplot(gs[:2, :])
+
+    # the two last rows are used for the permuted results
+    ax_permuted = [fig.add_subplot(gs[2, 0]), fig.add_subplot(gs[2, 1]), fig.add_subplot(gs[2, 2]), fig.add_subplot(gs[3, 0]), fig.add_subplot(gs[3, 1]), fig.add_subplot(gs[3, 2])]
+
+    # plot the unpermuted results
+    for key, value in tmp_dict.items():
+        params = value["params"]
+        tgm = value["tgm"]
+
+        if type(key) == str:
+            ax = ax_original
+            ax.set_title(key.capitalize())
+            colourbar = True
+        else:
+            ax = ax_permuted.pop(0)
+            ax.set_title(f"Permution {key}", fontsize=10)
+
+            colour = "grey"
+            colourbar = False
+            
+            for spine in ax.spines.values():
+                spine.set_edgecolor(colour)
+            
+
+            ax.tick_params(axis='both', colors=colour)
+
+            # set a label with the correlation between y_true and y_permutation
+            ax.text(
+                1, 1, 
+                f"Distance permuted order and right order \n {value['corr_permutation_y_true_y']:.2f}",
+                ha="right", va="top", fontsize=5, color = "k", transform=ax.transAxes
+                )
+
+        plot_tgm_ax(tgm, ax=ax, cbar_label=f"Correlation \n predicted {predict} and true values", min_val=min_val, max_val=max_val, cmap=cmap, colourbar=colourbar)
+
+
+
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
 
 
 if __name__ == "__main__":
     path = Path(__file__).parent
 
-    save_path = path / 'plots_shuffled'
+    save_path = path / 'plots'
 
     # ensure that path to save plots exists
     if not save_path.exists():
@@ -205,55 +216,35 @@ if __name__ == "__main__":
 
     
     tgm_files = {
-        #"animate_memory_predict_session_number.npy": {"predict": "session number", "task": "memory", "trial_type": "animate"},
-        "animate_memory_predict_session_day.npy": {"predict": "session day", "task": "memory", "trial_type": "animate"},
-        #"animate_visual_predict_session_number.npy": {"predict": "session number", "task": "visual", "trial_type": "animate"},
-        "animate_visual_predict_session_day.npy": {"predict": "session day", "task": "visual", "trial_type": "animate"},
-        #"animate_memory_predict_trial_number.npy": {"predict": "trial number", "task": "memory", "trial_type": "animate"},
-        #"animate_visual_predict_trial_number.npy": {"predict": "trial number", "task": "visual", "trial_type": "animate"},
-
+        "animate_memory_session_number.pkl": {"predict": "session number", "task": "memory", "trial_type": "animate"},
+        "animate_memory_session_day.pkl": {"predict": "session day", "task": "memory", "trial_type": "animate"},
+        "animate_visual_session_number.pkl": {"predict": "session number", "task": "visual", "trial_type": "animate"},
+        "animate_visual_session_day.pkl": {"predict": "session day", "task": "visual", "trial_type": "animate"},
         }
 
     
-    dict_path = path / "dicts_shuffled"
+    dict_path = path / "dicts"
     
     if not dict_path.exists():
         dict_path.mkdir()
 
     # takes a while to calculate, so save the results
-    if (dict_path / "MSE_dict.npy").exists() and (dict_path / "correlation_dict.npy").exists():
-        print("Loading MSE and correlation dictionaries from file")
-        MSE_dict = np.load(dict_path / "MSE_dict.npy", allow_pickle=True).item()
+    if (dict_path / "correlation_dict.npy").exists():
+        print("Loading correlation dictionaries from file")
         correlation_dict = np.load(dict_path / "correlation_dict.npy", allow_pickle=True).item()
     else:
-        MSE_dict, correlation_dict = prepare_dicts(tgm_files, path)
-
-        np.save(dict_path / "MSE_dict.npy", MSE_dict)
+        correlation_dict = prepare_dicts(tgm_files, path)
         np.save(dict_path / "correlation_dict.npy", correlation_dict)
     
-    
-    measurement = "correlation"
-    trial_type = "animate"
     predict = "session day"
-    
-    plot_tgm_session_day(
-        correlation_dict, 
-        measurement=measurement, 
-        save_path=save_path / f'time_elapsed_{measurement}_{trial_type}_{predict.replace(" ", "")}.png',
-        predict=predict,
-        trial_type=trial_type, 
-        min_val=-1,
-        max_val=1,
-        cmap = "RdBu_r")
 
-    predict = "session number"
-    plot_tgm_session_day(
-        correlation_dict, 
-        measurement=measurement, 
-        predict=predict,
-        save_path=save_path / f'time_elapsed_{measurement}_{trial_type}_{predict.replace(" ", "")}.png',
-        trial_type=trial_type, 
-        min_val=-1,
-        max_val=1,
-        cmap = "RdBu_r")
-
+    for trial_type in ["animate", "inanimate"]:
+        for session_type in ["memory", "visual"]:
+            for predict in ["session day", "session number"]:
+                plot_results(
+                    correlation_dict, 
+                    save_path = save_path / f'{trial_type}_{session_type}_{predict.replace(" ", "")}.png', 
+                    trial_type = trial_type, 
+                    session_type = session_type,
+                    predict = predict
+                    )
