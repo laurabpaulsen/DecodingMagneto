@@ -192,8 +192,8 @@ def plot_results(tgm_dict, save_path=None, trial_type="animate", session_type="m
 
             # set a label with the correlation between y_true and y_permutation
             ax.text(
-                1, 1, 
-                f"Distance permuted order and right order \n {value['corr_permutation_y_true_y']:.2f}",
+                1.05, 1.05, 
+                f"{value['corr_permutation_y_true_y']:.2f}",
                 ha="right", va="top", fontsize=5, color = "k", transform=ax.transAxes
                 )
 
