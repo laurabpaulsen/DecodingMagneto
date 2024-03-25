@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
-from tqdm import tqdm
 import pickle as pkl
-
 
 # local imports
 import sys
@@ -26,9 +24,7 @@ plt.rcParams['figure.dpi'] = 300
 
 
 def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="RdBu_r", colourbar = False):
-
     # plot the results
-
     im = ax.imshow(tgm, origin='lower', cmap=cmap, vmin=min_val, vmax=max_val)
 
     # add colorbar
@@ -42,18 +38,6 @@ def plot_tgm_ax(tgm, ax, cbar_label='MSE', min_val=None, max_val=None, cmap="RdB
 
     return ax
 
-def determine_row_col(params):
-    if params['task'] == 'memory':
-        row = 0
-    elif params['task'] == 'visual':
-        row = 1
-
-    if params['predict'] == 'session day':
-        col = 0
-    elif params['predict'] == 'trial number':
-        col = 1
-
-    return row, col
 
 def flatten_remove_nans(tgm):
     # flatten the tgm
@@ -63,32 +47,7 @@ def flatten_remove_nans(tgm):
     tgm = tgm[~np.isnan(tgm)]
 
     return tgm
-
-
-
-
-
-def return_file_paths(path, file):
-    """
-    Returns file paths for animate and inanimate versions of the same file, both the predicted and true values
-    """
-
-    animate_file = path / 'results' / file
-    inanimate_file = path / 'results' / file.replace('animate', 'inanimate')
-
-    return animate_file, inanimate_file, 
-
     
-
-def update_params(params, trial_type):
-    """
-    Updates the params dictionary to reflect the trial type
-    """
-    tmp = params.copy()
-    tmp['trial_type'] = trial_type
-
-    return tmp
-
 
 def get_correlation_tgm(predicted, true):
     """
@@ -107,70 +66,50 @@ def get_correlation_tgm(predicted, true):
     return correlation_tgm
 
 
-def prepare_dicts(file_dict, path):
+def prepare_dicts(results_path):
 
-    output_all = {}
-    for f, params in tqdm(file_dict.items(), desc="Preparing dictionaries with correlation results"):
-        animate_file, inanimate_file = return_file_paths(path, f)
+    results = pkl.load(open(results_path, "rb"))
 
-        animate = pkl.load(open(animate_file, "rb"))
-        inanimate = pkl.load(open(inanimate_file, "rb"))
-
-        for trial_type, results in zip(["animate", "inanimate"], [animate, inanimate]):
-
-            tmp_params = update_params(params, trial_type)
-            f_tmp = f.replace("animate", trial_type)
             
-            # loop over the results and permuted results
-            output_tmp = {}
-            for key, value in results.items():
-                if key == "original":
-                    permutation = "original"
+    # loop over the results and permuted results
+    output = {}
+    
+    for key, value in results.items():
+        if key == "original":
+            permutation = "original"
 
-                else:
-                    permutation = value["correlation"]
-
-
-                # get correlation between the predicted and true values for each timepoint
-                correlation_tgm = get_correlation_tgm(value["predicted"], value["true"])
-
-                # add to the output dictionary
-                output_tmp[key] = {
-                    "params": tmp_params,
-                    "corr_permutation_y_true_y": permutation,
-                    "tgm": correlation_tgm
-                }
-
-            output_all[f_tmp] = output_tmp
-
-    return output_all
+        else:
+            permutation = value["correlation"]
 
 
+        # get correlation between the predicted and true values for each timepoint
+        correlation_tgm = get_correlation_tgm(value["predicted"], value["true"])
 
-def plot_results(tgm_dict, save_path=None, trial_type="animate", session_type="memory", cmap="RdBu_r", predict="session number", min_val=-1, max_val=1):    
-    tmp_dict = {}
+        # add to the output dictionary
+        output[key] = {
+            "corr_permutation_y_true_y": permutation,
+            "tgm": correlation_tgm
+        }
+    
+    # reorder dictionary so original is first (helps with plotting)
+    sorted_keys = sorted(output.keys(), key=lambda x: (x != 'original', x)) # sort the keys so that 'original' is first
+    output = {key: output[key] for key in sorted_keys} # create a new dictionary with the sorted keys
 
-    for key, value in tgm_dict.items():
-        for key2, value2 in value.items():
-            params = value2["params"]
 
+    return output
 
-            if params["trial_type"] == trial_type and params["predict"] == predict and params["task"] == session_type:
-                tmp_dict[key2] = value2
-
+def plot_results(tgm_dict, save_path=None, cmap="RdBu_r", predict="session number", min_val=-1, max_val=1):    
     fig = plt.figure(figsize=(8, 12), dpi=300)
     gs = plt.GridSpec(4, 3, figure=fig, hspace=0.5, wspace=0.5, width_ratios=[1, 1, 1], height_ratios=[2, 1, 1, 1])
 
-
-     # the two top rows are used for the unpermuted results
+    # the two top rows are used for the unpermuted results
     ax_original = fig.add_subplot(gs[:2, :])
 
     # the two last rows are used for the permuted results
     ax_permuted = [fig.add_subplot(gs[2, 0]), fig.add_subplot(gs[2, 1]), fig.add_subplot(gs[2, 2]), fig.add_subplot(gs[3, 0]), fig.add_subplot(gs[3, 1]), fig.add_subplot(gs[3, 2])]
 
     # plot the unpermuted results
-    for key, value in tmp_dict.items():
-        params = value["params"]
+    for key, value in tgm_dict.items():
         tgm = value["tgm"]
 
         if type(key) == str:
@@ -178,7 +117,10 @@ def plot_results(tgm_dict, save_path=None, trial_type="animate", session_type="m
             ax.set_title(key.capitalize())
             colourbar = True
         else:
-            ax = ax_permuted.pop(0)
+            try:
+                ax = ax_permuted.pop(0)
+            except IndexError: # if there are more permuations than axes available, break
+                break
             ax.set_title(f"Permution {key}", fontsize=10)
 
             colour = "grey"
@@ -187,7 +129,6 @@ def plot_results(tgm_dict, save_path=None, trial_type="animate", session_type="m
             for spine in ax.spines.values():
                 spine.set_edgecolor(colour)
             
-
             ax.tick_params(axis='both', colors=colour)
 
             # set a label with the correlation between y_true and y_permutation
@@ -198,8 +139,6 @@ def plot_results(tgm_dict, save_path=None, trial_type="animate", session_type="m
                 )
 
         plot_tgm_ax(tgm, ax=ax, cbar_label=f"Correlation \n predicted {predict} and true values", min_val=min_val, max_val=max_val, cmap=cmap, colourbar=colourbar)
-
-
 
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')
@@ -214,37 +153,30 @@ if __name__ == "__main__":
     if not save_path.exists():
         save_path.mkdir()
 
-    
-    tgm_files = {
-        "animate_memory_session_number.pkl": {"predict": "session number", "task": "memory", "trial_type": "animate"},
-        "animate_memory_session_day.pkl": {"predict": "session day", "task": "memory", "trial_type": "animate"},
-        "animate_visual_session_number.pkl": {"predict": "session number", "task": "visual", "trial_type": "animate"},
-        "animate_visual_session_day.pkl": {"predict": "session day", "task": "visual", "trial_type": "animate"},
-        }
-
-    
+        
     dict_path = path / "dicts"
     
     if not dict_path.exists():
         dict_path.mkdir()
 
-    # takes a while to calculate, so save the results
-    if (dict_path / "correlation_dict.npy").exists():
-        print("Loading correlation dictionaries from file")
-        correlation_dict = np.load(dict_path / "correlation_dict.npy", allow_pickle=True).item()
-    else:
-        correlation_dict = prepare_dicts(tgm_files, path)
-        np.save(dict_path / "correlation_dict.npy", correlation_dict)
-    
-    predict = "session day"
-
+    # looping over each trial type, session type and prediction type
     for trial_type in ["animate", "inanimate"]:
-        for session_type in ["memory", "visual"]:
+        for session_type in ["memory", "visual", "visualsubset"]:
             for predict in ["session day", "session number"]:
+
+                file_path = dict_path / f"correlation_dict_{trial_type}_{session_type}_{predict.replace(' ', '')}.npy"
+
+                if (file_path).exists():                           
+                    print(f"Loading correlation dict for {trial_type} {session_type} {predict} from file")
+                    correlation_dict = np.load(file_path, allow_pickle=True).item()
+
+                else:
+                    print(f"Calculating correlation dict for {trial_type} {session_type} {predict}")
+                    results_path = path / "results" / f"{trial_type}_{session_type}_{predict.replace(' ', '_')}.pkl"
+                    correlation_dict = prepare_dicts(results_path)
+                    np.save(file_path, correlation_dict) # save the dictionary to file to be loaded in if script is run again
+
                 plot_results(
                     correlation_dict, 
-                    save_path = save_path / f'{trial_type}_{session_type}_{predict.replace(" ", "")}.png', 
-                    trial_type = trial_type, 
-                    session_type = session_type,
-                    predict = predict
+                    save_path = save_path / f'{trial_type}_{session_type}_{predict.replace(" ", "")}.png'
                     )
