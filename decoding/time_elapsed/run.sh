@@ -1,7 +1,9 @@
 python predict_session_day.py --trial_type "animate" --task "memory"
 python predict_session_day.py --trial_type "animate" --task "visual"
+python predict_session_day.py --trial_type "animate" --task "visualsubset"
 python predict_session_day.py --trial_type "inanimate" --task "memory"
 python predict_session_day.py --trial_type "inanimate" --task "visual"
+python predict_session_day.py --trial_type "inanimate" --task "visualsubset"
 
 python predict_session_number.py --trial_type "animate" --task "memory"
 python predict_session_number.py --trial_type "animate" --task "visual"

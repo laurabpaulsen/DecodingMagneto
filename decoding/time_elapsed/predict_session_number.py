@@ -17,9 +17,9 @@ from ridge_fns import tgm_ridge_scores
 def parse_args():
     parser = ap.ArgumentParser()
     parser.add_argument('--trial_type', type=str, default='animate', help='Trial type. Can be either animate or inanimate.')
-    parser.add_argument('--task', type=str, default='visual', help='Task. Can be either combined, visual or memory.')
+    parser.add_argument('--task', type=str, default='visual', help='Task. Can be either visual or memory or visualsubset.')
     parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
-    parser.add_argument('--nperms', type=int, default=6, help='Number of permutations to use.')
+    parser.add_argument('--nperms', type=int, default=24, help='Number of permutations to use.')
 
     args = parser.parse_args()
     
@@ -106,6 +106,11 @@ if __name__ == '__main__':
         sessions = sessions[:4] + sessions[8:]
         session_days = session_days[:4] + session_days[8:]
 
+    if args.task == 'visualsubset':
+        # only take the first 4 visual sessions
+        sessions = sessions[:4]
+        session_days = session_days[:4]
+
     elif args.task == 'memory':
         sessions = sessions[4:8]
         session_days = session_days[4:8]
@@ -130,7 +135,7 @@ if __name__ == '__main__':
     args_list = [(permute_session_days, session_days, sessions, triggers, args.ncv) for permute_session_days in permutations]
     
     # Using multiprocessing to parallelize
-    with Pool(cpu_count()) as p:
+    with Pool(cpu_count()-5) as p:
         results = p.map(run_permutation, args_list)
 
     for i, res in enumerate(results):
