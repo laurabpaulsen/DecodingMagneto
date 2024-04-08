@@ -150,3 +150,5 @@ laurap.code-workspace
 trash/
 
 *permutation_results*
+
+decoding/time_elapsed/plots/extra/*
