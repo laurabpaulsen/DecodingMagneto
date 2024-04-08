@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 import pickle as pkl
+import pandas as pd
 
 # local imports
 import sys
@@ -98,16 +99,26 @@ def prepare_dicts(results_path):
 
     return output
 
-def plot_results(tgm_dict, save_path=None, cmap="RdBu_r", predict="session number", min_val=-1, max_val=1):    
-    fig = plt.figure(figsize=(8, 12), dpi=300)
-    gs = plt.GridSpec(4, 3, figure=fig, hspace=0.5, wspace=0.5, width_ratios=[1, 1, 1], height_ratios=[2, 1, 1, 1])
+def plot_results(tgm_dict, save_path=None, cmap="RdBu_r", min_val=-1, max_val=1):    
+    # figuring out size of figure and gridspec
+    n_permutations = len(tgm_dict) - 1
+    n_rows = 2 + n_permutations//3
+    n_cols = 3
+    
+    fig = plt.figure(figsize=(n_cols*2.5 , n_rows*3), dpi=300)
+
+    gs = plt.GridSpec(n_rows, n_cols, figure=fig, hspace=0.5, wspace=0.5, width_ratios=[1, 1, 1])
 
     # the two top rows are used for the unpermuted results
     ax_original = fig.add_subplot(gs[:2, :])
 
     # the two last rows are used for the permuted results
-    ax_permuted = [fig.add_subplot(gs[2, 0]), fig.add_subplot(gs[2, 1]), fig.add_subplot(gs[2, 2]), fig.add_subplot(gs[3, 0]), fig.add_subplot(gs[3, 1]), fig.add_subplot(gs[3, 2])]
 
+    ax_permuted = []
+    for i in range(2, n_rows):
+        for j in range(n_cols):
+            ax_permuted.append(fig.add_subplot(gs[i, j]))
+   
     # plot the unpermuted results
     for key, value in tgm_dict.items():
         tgm = value["tgm"]
@@ -138,21 +149,76 @@ def plot_results(tgm_dict, save_path=None, cmap="RdBu_r", predict="session numbe
                 ha="right", va="top", fontsize=5, color = "k", transform=ax.transAxes
                 )
 
-        plot_tgm_ax(tgm, ax=ax, cbar_label=f"Correlation \n predicted {predict} and true values", min_val=min_val, max_val=max_val, cmap=cmap, colourbar=colourbar)
+        plot_tgm_ax(tgm, ax=ax, cbar_label=f"Correlation \n predicted and true values", min_val=min_val, max_val=max_val, cmap=cmap, colourbar=colourbar)
 
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')
+    
+    plt.close()
+
+
+
+def create_table(correlation_dict, timesample = 100):
+    # create a table with the correlation between the true and permuted y values
+    df = pd.DataFrame(columns=["permutation", "correlation_per_y_true_y", "corr_timesample", "timesample"])
+    for key, value in correlation_dict.items():
+
+        # get the correlation at the timesample
+        corr_ts = value["tgm"][timesample, timesample]
+
+        tmp = pd.DataFrame({"permutation": [key], "correlation_per_y_true_y": [value["corr_permutation_y_true_y"]], "corr_timesample": [corr_ts], "timesample": [timesample]})
+
+        df = pd.concat([df, tmp], axis=0)
+
+
+    return df
+
+def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r"):    
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8), dpi=300)
+
+    cmap = plt.colormaps[cmap]
+    for i, (key, value) in enumerate(tgm_dict.items()):
+        tgm = value["tgm"]
+        diagonal = np.diag(tgm)
+        corr_y_true_y = value["corr_permutation_y_true_y"]
+
+        if type(key) == str:
+            ax.plot(diagonal, label=key.capitalize(), color="k")
+        else:
+            # colour by the correlation between y_true and y_permutation
+            ax.plot(diagonal, color=cmap(abs(corr_y_true_y)), alpha=0.5, linewidth=0.5)
+
+    # plot the colourbar
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=1))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax)
+
+    # set the colourbar label
+    cbar.set_label("Correlation between true y and permuted y", rotation=-90, va="bottom")
+
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Correlation between predicted and true values")
+
+    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ], size = 7)
+            
+    if save_path:
+        plt.savefig(save_path, bbox_inches='tight')
+    
+    plt.close()
 
 
 if __name__ == "__main__":
     path = Path(__file__).parent
 
     save_path = path / 'plots'
+    save_path_extra = save_path / 'extra'
 
-    # ensure that path to save plots exists
+    # make dirs for saving if they don't exist
     if not save_path.exists():
         save_path.mkdir()
-
+    
+    if not save_path_extra.exists():
+        save_path_extra.mkdir()
         
     dict_path = path / "dicts"
     
@@ -161,7 +227,7 @@ if __name__ == "__main__":
 
     # looping over each trial type, session type and prediction type
     for trial_type in ["animate", "inanimate"]:
-        for session_type in ["memory", "visual", "visualsubset"]:
+        for session_type in ["memory", "visual", "visualsubset_easy", "visualsubset"]:
             for predict in ["session day", "session number"]:
 
                 file_path = dict_path / f"correlation_dict_{trial_type}_{session_type}_{predict.replace(' ', '')}.npy"
@@ -177,6 +243,25 @@ if __name__ == "__main__":
                     np.save(file_path, correlation_dict) # save the dictionary to file to be loaded in if script is run again
 
                 plot_results(
-                    correlation_dict, 
+                    # take the 7 first entries in the dictionary (original and 6 permutations)
+                    dict(list(correlation_dict.items())[:7]),
                     save_path = save_path / f'{trial_type}_{session_type}_{predict.replace(" ", "")}.png'
                     )
+                
+                plot_results(
+                    correlation_dict,
+                    save_path = save_path_extra / f'{trial_type}_{session_type}_{predict.replace(" ", "")}.png'
+                    )
+                
+                plot_results_diagonals(
+                    correlation_dict,
+                    save_path = save_path_extra / f'diagonals_{trial_type}_{session_type}_{predict.replace(" ", "")}.png'
+                    )
+                
+                # get the timesample for 200 ms
+                hz = 250
+                ts = int(0.2 * hz)
+                table = create_table(correlation_dict, timesample = ts)
+
+            
+                table.to_csv(save_path_extra / f'{trial_type}_{session_type}_{predict.replace(" ", "")}_table.csv', index=False)
