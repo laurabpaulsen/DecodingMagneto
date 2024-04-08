@@ -5,7 +5,7 @@ import json
 import itertools
 from scipy.stats import spearmanr
 import pickle
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 
 # local imports
 import sys
@@ -106,14 +106,22 @@ if __name__ == '__main__':
         sessions = sessions[:4] + sessions[8:]
         session_days = session_days[:4] + session_days[8:]
 
-    if args.task == 'visualsubset':
+    elif args.task == 'visualsubset':
         # only take the first 4 visual sessions
         sessions = sessions[:4]
         session_days = session_days[:4]
 
+    elif args.task == 'visualsubset_easy':
+        # take session with the following indices: 0, 3, 8, 10
+        sessions = [sessions[i] for i in [0, 3, 8, 10]]
+        session_days = [session_days[i] for i in [0, 3, 8, 10]]
+
     elif args.task == 'memory':
         sessions = sessions[4:8]
         session_days = session_days[4:8]
+    
+    else: 
+        raise ValueError("Task must be either visual, visualsubset, visualsubset_easy or memory")
 
     # get the triggers
     triggers = get_triggers(args.trial_type)
@@ -135,7 +143,7 @@ if __name__ == '__main__':
     args_list = [(permute_session_days, session_days, sessions, triggers, args.ncv) for permute_session_days in permutations]
     
     # Using multiprocessing to parallelize
-    with Pool(cpu_count()-5) as p:
+    with Pool(1) as p:
         results = p.map(run_permutation, args_list)
 
     for i, res in enumerate(results):
