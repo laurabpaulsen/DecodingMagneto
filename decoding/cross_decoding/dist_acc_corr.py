@@ -154,11 +154,33 @@ def cluster_permutation_test_mne(X, y, n_perm, correlation=pearsonr):
         threshold=0.05)
     
     return corrs, permutations_corr, clusters, cluster_p_values
-    
-def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000, correlation=pointbiserialr):
 
-    # prep x and y
-    dist = get_distance_matrix([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1])
+
+
+def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000, correlation=pearsonr, distance = "days"):
+
+    # convert to datetime
+    dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021'], format='%d-%m-%Y')
+       
+    # set up figure
+    gs_kw = dict(width_ratios=[1, 0.3], height_ratios=[1], wspace=0.01, hspace=0.3)
+    fig, axes = plt.subplots(1, 2, figsize=(17, 5), dpi=300, gridspec_kw=gs_kw, sharey=True)
+
+    bin_range = (-0.65, 0.65)
+
+    bins = np.linspace(bin_range[0], bin_range[1], 20)
+
+    if distance == "days":
+        days = dates.copy()
+        dist = get_distance_matrix(days)
+        
+    elif distance == "session":
+        sessions = np.arange(7)
+        dist = get_distance_matrix(sessions)
+
+
+    ax_hist = axes[1]
+    ax_corr = axes[0]
 
     # get x and y
     X, y = prep_x_y(acc, dist)
@@ -168,7 +190,7 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
         corr, all_perm, pvals = permutation_test(X, y, n_perm)
     else:
         corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm, correlation=correlation)
-        
+                
         # reshape corr
         corr = corr.reshape(-1)
 
@@ -180,136 +202,30 @@ def plot_corr_hist_cond(acc, save_path = None, corr_color="C0", perm_color="ligh
             sig_timepoints = np.concatenate([clusters[i][0] for i in sig_clusters_idx])
         except:
             sig_timepoints = []
-    
+
+        print(sig_timepoints)
+            
         # get pvals
         pvals = np.ones(X.shape[1])
 
         # set pvals of significant time points to 0
         pvals[sig_timepoints] = 0
-
-    print(sig_timepoints)
-
-
-    # set up figure
-    gs_kw = dict(width_ratios=[1, 0.4], height_ratios=[1], wspace=0.01, hspace=0.3)
-    fig, ax = plt.subplots(1, 2, figsize=(10, 6), dpi=300, gridspec_kw=gs_kw)
-
-    bin_range = (-0.5, 0.5)
-    bins = np.linspace(bin_range[0], bin_range[1], 20)
-
-    # plot permutations with alpha according
+            
     for perm in all_perm:
-        ax[0].plot(perm, color=perm_color, linewidth=0.5, alpha=0.05)
+        ax_corr.plot(perm, color=perm_color, linewidth=0.5, alpha=0.4)
 
-    plot_corr(ax[0], corr, pvals, alpha = alpha, color=corr_color)
-    
+    # plot correlation
+    plot_corr(ax_corr, corr, pvals, alpha = alpha, color=corr_color, y_lim=(-1, 1))
+
     # get y limits
-    y_lim = ax[0].get_ylim()
+    y_lim = ax_corr.get_ylim()
 
     # plot histogram of correlations
-    plot_hist_of_corr(ax[1], corr, bins, color=corr_color, y_lim=y_lim)
-
-
-    # add y label
-    ax[0].set_ylabel("Point biserial correlation", fontsize=16)
-
-    # add x label
-    ax[0].set_xlabel("TIME (s)", fontsize=16)
-
-
-    if save_path is not None:
-        plt.savefig(save_path)
-
-
-def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000, correlation=pearsonr, distance = "days"):
-    # only memory
-    mem_indices = [7, 8, 9, 10]
-    mem_acc = acc[mem_indices, :, :, :][:, mem_indices, :, :]
-
-    # only visual
-    vis_indices = [0, 1, 2, 3, 4, 5, 6]
-    vis_acc = acc[vis_indices, :, :, :][:, vis_indices, :, :]
-
-    combined_indices = [0, 1, 2, 3, 8, 9, 10, 4, 5, 6, 7]
-    combined_acc = acc.copy()
-
-
-    # convert to datetime
-    dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021', '22-10-2020', '29-10-2020', '12-11-2020', '13-11-2020'], format='%d-%m-%Y')
-    order = np.array([0, 1, 2, 3, 8, 9, 10, 4, 5, 6, 7])
-       
-    # set up figure
-    gs_kw = dict(width_ratios=[1, 0.3, 1, 0.3, 1, 0.3], height_ratios=[1], wspace=0.01, hspace=0.3)
-    fig, axes = plt.subplots(1, 6, figsize=(17, 5), dpi=300, gridspec_kw=gs_kw, sharey=True)
-
-    bin_range = (-0.65, 0.65)
-
-    bins = np.linspace(bin_range[0], bin_range[1], 20)
-
-    for i, (tmp_acc, inds) in enumerate(zip([vis_acc, mem_acc, combined_acc], [vis_indices, mem_indices, combined_indices])):
-
-        if distance == "days":
-            tmp_days = dates.copy()
-            dist = get_distance_matrix(tmp_days[inds])
-        
-        elif distance == "session":
-            tmp_session = order.copy()
-            dist = get_distance_matrix(tmp_session[inds])
-
-
-        ax_hist = axes[i*2+1]
-        ax_corr = axes[i*2]
-
-        # get x and y
-        X, y = prep_x_y(tmp_acc, dist)
-
-        # permutation test to see if correlation is significant
-        if not cluster:
-            corr, all_perm, pvals = permutation_test(X, y, n_perm)
-        else:
-            corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm, correlation=correlation)
-                
-            # reshape corr
-            corr = corr.reshape(-1)
-
-            # get indices of significant clusters
-            sig_clusters_idx = np.where(pvals_tmp < alpha)[0]
-
-            # get indices of significant time points
-            try: 
-                sig_timepoints = np.concatenate([clusters[i][0] for i in sig_clusters_idx])
-            except:
-                sig_timepoints = []
-
-            print(sig_timepoints)
-            
-            # get pvals
-            pvals = np.ones(X.shape[1])
-
-            # set pvals of significant time points to 0
-            pvals[sig_timepoints] = 0
-            
-        for perm in all_perm:
-            ax_corr.plot(perm, color=perm_color, linewidth=0.5, alpha=0.4)
-
-        # plot correlation
-        plot_corr(ax_corr, corr, pvals, alpha = alpha, color=corr_color, y_lim=(-1, 1))
-
-        # get y limits
-        y_lim = ax_corr.get_ylim()
-
-        # plot histogram of correlations
-        plot_hist_of_corr(ax_hist, corr, bins, color=corr_color, y_lim=y_lim)
+    plot_hist_of_corr(ax_hist, corr, bins, color=corr_color, y_lim=y_lim)
 
 
     fig.supxlabel("TIME (s)", fontsize=16)
     fig.supylabel("Pearson's R", fontsize=16)
-
-    
-  
-    axes[0].set_title("Visual".upper())
-    axes[2].set_title("Memory".upper())
-    axes[4].set_title("Combined".upper())
 
 
     if save_path is not None:
@@ -327,25 +243,17 @@ if __name__ == "__main__":
     alpha = 0.05
 
     distance = "days"
-    #plot_corr_hist(
-    #    acc = acc, 
-    #    distance=distance,
-    #    save_path = plot_path / f"corr_acc_dist_{distance}.png",
-    #    alpha = alpha,
-    #    cluster=True)
+    plot_corr_hist(
+        acc = acc, 
+        distance=distance,
+        save_path = plot_path / f"corr_acc_dist_{distance}.png",
+        alpha = alpha,
+        cluster=True)
     
     distance = "session"
-    #plot_corr_hist(
-    #    acc = acc, 
-    #    distance=distance,
-    #    save_path = plot_path / f"corr_acc_dist_{distance}.png",
-    #    alpha = alpha,
-    #    cluster=True)
-
-    plot_corr_hist_cond(
-        acc, 
-        save_path=plot_path / "corr_acc_dist_cond.png",
+    plot_corr_hist(
+        acc = acc, 
+        distance=distance,
+        save_path = plot_path / f"corr_acc_dist_{distance}.png",
         alpha = alpha,
-        cluster=True,
-        correlation=pointbiserialr
-        )
+        cluster=True)
