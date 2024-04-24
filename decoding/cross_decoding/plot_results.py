@@ -12,6 +12,7 @@ import numpy as np
 import os
 import seaborn as sns
 from scipy.signal import find_peaks
+from pathlib import Path
 
 alpha = 0.05
 
@@ -75,7 +76,7 @@ def y_axis_percent(ax):
     ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
 
 def plot_cross_decoding_matrix(acc, save_path = None):
-    fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (12, 12), gridspec_kw={'width_ratios': [1, 1, 1]})
+    fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (12, 12))
     
     for i in range(acc.shape[0]):
         for j in range(acc.shape[1]):
@@ -109,7 +110,6 @@ def plot_cross_decoding_matrix(acc, save_path = None):
 
     # set title of all axes on first column
     for i, ax in enumerate(axs[:, 0]):
-        print(f"Session {i+1}")
         ax.set_ylabel(f'Session {i+1}')
 
 
@@ -146,7 +146,7 @@ def add_dif_label(ax, label, colour = 'red'):
 def add_tgm_label(ax, label, colour = 'black'):
     ax.text(-0.05, 1.05, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
 
-def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
+def plot_train_test_condition_new(acc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
     fig, axs = plt.subplots(3, 3, figsize = (14, 12), dpi = 300, gridspec_kw={'height_ratios': [1, 1, 0.20]})
     
     vis = np.array([0, 1, 2, 3, 4, 5, 6])
@@ -232,13 +232,13 @@ def plot_train_test_condition_new(acc, parc, vmin = 40, vmax = 60, diff_colour =
     # add space between plots
     plt.tight_layout(h_pad = 3)
 
-    plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average_vis_mem_new.png'))
+    plt.savefig(os.path.join('plots', f'cross_decoding_average_vis_mem_new.png'))
     plt.close()
 
 
 
 
-def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
+def plot_train_test_condition(acc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
     fig, axs = plt.subplots(4, 3, figsize = (12, 12*4/3), dpi = 300)
     
     vis = np.array([0, 1, 2, 3, 4, 5, 6])
@@ -335,39 +335,8 @@ def plot_train_test_condition(acc, parc, vmin = 40, vmax = 60, diff_colour = 'da
     axs[-1,1].set_xlabel('TEST TIME (s)', fontsize=14)
 
     plt.tight_layout()
-    plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average_vis_mem.png'))
+    plt.savefig(os.path.join('plots', f'cross_decoding_average_vis_mem.png'))
     plt.close()
-
-def plot_diagonals(acc_dict, title = 'diagonals', save_path = None):
-    """
-    
-    """
-
-    dict_diag = {}
-    for parc, acc in acc_dict.items():
-        # check if any nans
-        if np.isnan(acc).any():
-            avg = np.nanmean(np.nanmean(acc, axis=0), axis=0)
-            # take the diagonal
-            dict_diag[parc] = np.diag(avg)
-
-        else:
-            within_session = np.diagonal(acc, axis1=0, axis2=1)
-            # take the mean over sessions
-            avg = np.nanmean(within_session, axis=2)
-            dict_diag[parc] = np.diag(avg)
-
-
-    fig, ax = plt.subplots(1, 1, figsize=(12, 6))
-    for key, value in dict_diag.items():
-        ax.plot(value, label=key)
-
-    ax.set_xlabel('time (ms)'.upper())
-    ax.set_ylabel('accuracy'.upper())
-    ax.set_title(title)
-    ax.legend()
-    if save_path:
-        plt.savefig(save_path)
 
 
 def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
@@ -384,7 +353,7 @@ def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
 
     fig, ax = plt.subplots(3, 1, figsize = (12, 14), dpi = 300)
 
-    for ax_ind, cond in enumerate([vis_inds, mem_inds, None]):
+    for ax_ind, cond in enumerate([vis_inds]):
         # create 11 by 11 matrix with distances between sessions
         # empty matrix
         distances = np.zeros((11, 11))
@@ -457,7 +426,7 @@ def average_diagonal(acc, alpha = None, acc_pair = None, save_path = None):
     """
 
     """
-    fig, ax = plt.subplots(1, 1, figsize=(8, 6), dpi = 300)
+    fig, ax = plt.subplots(1, 1, figsize=(8, 4), dpi = 300)
 
     diag = np.diagonal(acc, axis1=0, axis2=1)
 
@@ -514,7 +483,7 @@ def average_diagonal_within(acc, alpha = None, acc_pair = None, save_path = None
     """
 
     """
-    fig, ax = plt.subplots(1, 1, figsize=(8, 6), dpi = 300)
+    fig, ax = plt.subplots(1, 1, figsize=(8, 4), dpi = 300)
 
     diag = np.diagonal(acc, axis1=0, axis2=1)
 
@@ -549,92 +518,128 @@ def average_diagonal_within(acc, alpha = None, acc_pair = None, save_path = None
     # x axis in seconds
     x_axis_seconds(ax)
 
-
     if save_path:
         plt.savefig(save_path)
 
 
+def corr_distance_decoding(acc, save_path = None):
+    """
+    Plot the correlation between distance between sessions and decoding accuracy per timepoint
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(8, 4), dpi = 300)
+
+    session_days = [0, 1, 7, 8, 145, 159, 161]
+
+    diagonals = np.diagonal(acc, axis1=-2, axis2=-1)
+    print(diagonals.shape)
+
+    correlations = np.zeros(250)
+
+    for t in range(diagonals.shape[-1]):
+        # get data from the given timepoint
+        data_timepoint = diagonals[..., t]
+        
+        distances = []
+        accuracies = []
+        for i in range(7):
+            for j in range(7):
+                if i == j:
+                    continue
+                else:
+                    # get the distance between the sessions
+                    distance = abs(session_days[i] - session_days[j])
+
+                    # get the accuracy
+                    accuracy = data_timepoint[i, j]
+
+                    distances.append(distance)
+                    accuracies.append(accuracy)
+        
+        # calculate the correlation
+        correlations[t] = np.corrcoef(distances, accuracies)[0, 1]
+
+    ax.plot(correlations)
+
+    if save_path:
+        plt.savefig(save_path)
+
 def main_plot_generator():
+    path = Path(__file__)
+    output_path = path.parents[0] / 'plots' 
+    
+    # create output path if it does not exist
+    if not output_path.exists():
+        output_path.mkdir()
+
     accuracies_cross = {} # not including testing and training on the same session
     accuracies = {} # including testing and training on the same session
     accuracies_within = {} # only testing and training on the same session
 
-    for parc in ["sens"]:#, "HCPMMP1"]: #['aparc','aparc.DKTatlas', 'aparc.a2009s', 'sens', 'HCPMMP1']:
+    
+    # read in results
+    accuracies = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_sens.npy'), allow_pickle=True)
+
+    # only get visual sessions
+    accuracies = accuracies[:7, :7, :, :]
+
+    accuracies_within = np.diagonal(accuracies, axis1=0, axis2=1)
+
+
+
+    # plot all pairs of sessions in one figure
+    plot_cross_decoding_matrix(accuracies, save_path = output_path / 'cross_decoding_matrix.png')
+
+    # plot all pairs in the of the first 4 sessions in one figure
+    plot_cross_decoding_matrix(accuracies[:3, :3, :, :], save_path = os.path.join('plots', f'cross_decoding_matrix_first4.png'))
+
+    # average over all sessions
+    #cross_diags_average_sesh(accuracies, save_path = os.path.join('plots', f'cross_decoding_diagonals_average.png'))
         
-        # read in results
-        accuracies[parc] = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_{parc}.npy'), allow_pickle=True)
-        accuracies_within[parc] = np.diagonal(accuracies[parc], axis1=0, axis2=1)
+    # set within session accuracies to nan
+    acc1 = accuracies.copy()
+    acc1[np.arange(acc1.shape[0]), np.arange(acc1.shape[1]), :, :] = np.nan
 
+    accuracies_cross = acc1
 
-        # plot all pairs of sessions in one figure
-        #plot_cross_decoding_matrix(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix.png'))
+    # plot average over all conditions and all cross-session pairs
 
-        # plot all pairs in the of the first 4 sessions in one figure
-        #plot_cross_decoding_matrix(accuracies[parc][:3, :3, :, :], save_path = os.path.join('plots', f'cross_decoding_{parc}_matrix_first4.png'))
+    # average over cross-session pairs
+    avg = np.nanmean(acc1, axis=(0, 1))
 
-        # average over all sessions
-        #cross_diags_average_sesh(accuracies[parc], save_path = os.path.join('plots', f'cross_decoding_{parc}_diagonals_average.png'))
+    plt = plot.plot_tgm_fig(avg, vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
+    plt.savefig(os.path.join('plots', f'cross_decoding_average.png'))
+
+    # plot the average over all sessions
+    average_diagonal(
+        avg,
+        alpha,
+        acc_pair=accuracies_cross,
+        save_path = os.path.join('plots', f'diagonals_across.png'))
         
-        # set within session accuracies to nan
-        acc1 = accuracies[parc].copy()
-        acc1[np.arange(acc1.shape[0]), np.arange(acc1.shape[1]), :, :] = np.nan
+    # plot the within session diagonals
 
-        accuracies_cross[parc] = acc1
-
-        # plot average over all conditions and all cross-session pairs
-
-        # average over cross-session pairs
-        avg = np.nanmean(acc1, axis=(0, 1))
-
-        plt = plot.plot_tgm_fig(avg, vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
-        plt.savefig(os.path.join('plots', f'cross_decoding_{parc}_average.png'))
-
-        # plot the average over all sessions
-        average_diagonal(
-            avg,
-            alpha,
-            acc_pair=accuracies_cross[parc],
-            save_path = os.path.join('plots', f'diagonals_across.png'))
+    # average within session pairs
+    avg_within = np.nanmean(accuracies_within, axis = -1)
         
-        # plot the within session diagonals
+    average_diagonal_within(
+        avg_within,
+        alpha,
+        acc_pair=accuracies_within,
+        save_path = os.path.join('plots', f'diagonals_within.png'))
 
-        # average within session pairs
-        avg_within = np.nanmean(accuracies_within[parc], axis = -1)
-        
-        average_diagonal_within(
-            avg_within,
-            alpha,
-            acc_pair=accuracies_within[parc],
-            save_path = os.path.join('plots', f'diagonals_within.png'))
+    plt = plot.plot_tgm_fig(avg_within, vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
+    plt.savefig(os.path.join('plots', f'within_decoding_average.png'))
 
-        plt = plot.plot_tgm_fig(avg_within, vmin=35, vmax=65, chance_level=chance_level(588*11, alpha = alpha, p = 0.5), cbar_loc='right')
-        plt.savefig(os.path.join('plots', f'within_decoding_{parc}_average.png'))
+    # plot the difference between within and cross session pairs
+    difference = avg - avg_within
+    plt = plot.plot_tgm_fig(difference, vmin=-6, vmax=6, cmap = "PuOr_r", cbar_loc='right')
 
+    plt.savefig(os.path.join('plots', f'difference_decoding_average.png'))
 
-        # plot the difference between within and cross session pairs
-        difference = avg - avg_within
-        plt = plot.plot_tgm_fig(difference, vmin=-6, vmax=6, cmap = "PuOr_r", cbar_loc='right')
-
-        plt.savefig(os.path.join('plots', f'difference_decoding_{parc}_average.png'))
-
-        # diagonal of the difference
-        average_diagonal(
-            difference,
-            save_path = os.path.join('plots', f'diagonals_difference.png'))
-
-        
-        
-        # plot averaged according to conditions and using cross-session pairs
-        plot_train_test_condition(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 96], [153,190]])
-
-        plot_train_test_condition_new(acc1, parc, diff_colour='darkblue', sig_inds= [[46, 96], [153,190]])
-
-
-
-    # Diagonals of the parcellations together
-    #plot_diagonals(accuracies_cross, title = 'Diagonals across sessions', save_path = os.path.join('plots', f'diagonals_across.png'))
-    #plot_diagonals(accuracies, title = 'Diagonals within session', save_path = os.path.join('plots', f'diagonals_within.png'), )
-
+    # diagonal of the difference
+    average_diagonal(
+        difference,
+        save_path = os.path.join('plots', f'diagonals_difference.png'))
 
 
 if __name__ == '__main__':

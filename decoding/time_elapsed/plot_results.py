@@ -186,15 +186,21 @@ def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r"):
             ax.plot(diagonal, label=key.capitalize(), color="k")
         else:
             # colour by the correlation between y_true and y_permutation
-            ax.plot(diagonal, color=cmap(abs(corr_y_true_y)), alpha=0.5, linewidth=0.5)
+            ax.plot(diagonal, color= "forestgreen", alpha=0.5, linewidth=0.5, label = f"Permuted labels")
+
+    # legend (but only with one permuted label)
+    handles, labels = ax.get_legend_handles_labels()
+    unique_labels = list(set(labels))
+    unique_handles = [handles[labels.index(label)] for label in unique_labels]
+    ax.legend(unique_handles, unique_labels)
 
     # plot the colourbar
-    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=1))
-    sm.set_array([])
-    cbar = plt.colorbar(sm, ax=ax)
+    #sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=1))
+    #sm.set_array([])
+    #cbar = plt.colorbar(sm, ax=ax)
 
     # set the colourbar label
-    cbar.set_label("Correlation between true y and permuted y", rotation=-90, va="bottom")
+    #cbar.set_label("Correlation between true y and permuted y", rotation=-90, va="bottom")
 
     ax.set_xlabel("Time (s)")
     ax.set_ylabel("Correlation between predicted and true values")
@@ -227,7 +233,7 @@ if __name__ == "__main__":
 
     # looping over each trial type, session type and prediction type
     for trial_type in ["animate", "inanimate"]:
-        for session_type in ["memory", "visual", "visualsubset_easy", "visualsubset"]:
+        for session_type in ["visual"]:
             for predict in ["session day", "session number"]:
 
                 file_path = dict_path / f"correlation_dict_{trial_type}_{session_type}_{predict.replace(' ', '')}.npy"

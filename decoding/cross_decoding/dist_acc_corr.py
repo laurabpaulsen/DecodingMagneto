@@ -8,7 +8,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 from scipy.stats import pearsonr
-from scipy.stats import pointbiserialr
 from pandas import to_datetime
 from mne.stats import permutation_cluster_test
 
@@ -92,9 +91,16 @@ def plot_hist_of_corr(ax, corr, bins, color="lightblue", y_lim=(-0.5, 0.5)):
     # limits
     ax.set_ylim(y_lim)
 
-def permute_x_y(X, y, n_perm, correlation=pearsonr):
+def permute_x_y(X, y, n_perm, correlation=pearsonr, stratified_permutation=False):
      # array for storing actual correlation
     corrs = np.zeros(X.shape[1])
+
+    if stratified_permutation:
+        # get unique y values
+        y_unique = np.unique(y)
+        
+        # get n_perm permutations
+        perms = [np.random.permutation(y_unique) for _ in range(n_perm)]
 
     # initialize numpy array to store all permutations
     permutations_corr = np.zeros((n_perm, len(X[0])))
@@ -104,10 +110,21 @@ def permute_x_y(X, y, n_perm, correlation=pearsonr):
         # actual correlation
         corrs[t], _ = correlation(X[:, t], y)
 
+    
     # loop over all permutations
     for n in range(n_perm):
+        if not stratified_permutation:
         # permute y
-        perm_y = np.random.permutation(y)
+            perm_y = np.random.permutation(y)
+        else:
+            perm_y = y.copy()
+
+            # replace y values with permuted values
+            for idx, y_val in enumerate(perm_y):
+                # get the index of the permuted value
+                perm_idx = np.where(y_unique == y_val)[0][0]
+                perm_y[idx] = perms[n][perm_idx]
+            
         for t in range(X.shape[1]):
             # calculate correlation
             perm_corr, _ = pearsonr(X[:, t], perm_y)
@@ -115,6 +132,7 @@ def permute_x_y(X, y, n_perm, correlation=pearsonr):
             # store permutation correlation
             permutations_corr[n, t] = perm_corr
 
+    print(permutations_corr)
     return corrs, permutations_corr
 
 
@@ -137,13 +155,15 @@ def permutation_test(X, y, n_perm):
         
     return corrs, permutations_corr, pvals
 
-def cluster_permutation_test_mne(X, y, n_perm, correlation=pearsonr):
+def cluster_permutation_test_mne(X, y, n_perm, correlation=pearsonr, stratified_permutation=False):
     """
     Uses the MNE python function to conduct a cluster permutation test
     """
+    print("Starting cluster permutation test by creating the permutations")
+    corrs, permutations_corr = permute_x_y(X, y, n_perm, correlation = correlation, stratified_permutation=stratified_permutation)
 
-    corrs, permutations_corr = permute_x_y(X, y, n_perm, correlation = correlation)
-
+    print("corrs shape", corrs.shape)
+    print("permutations_corr shape", permutations_corr.shape)
     # reshape corrs
     corrs = corrs.reshape(1, -1)
     
@@ -157,14 +177,15 @@ def cluster_permutation_test_mne(X, y, n_perm, correlation=pearsonr):
 
 
 
-def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000, correlation=pearsonr, distance = "days"):
+def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue", alpha=0.05, cluster=False, n_perm=1000, correlation=pearsonr, distance = "days", stratified_permutation=False):
 
     # convert to datetime
     dates = to_datetime(['08-10-2020', '09-10-2020', '15-10-2020', '16-10-2020', '02-03-2021', '16-03-2021', '18-03-2021'], format='%d-%m-%Y')
        
     # set up figure
+    print("Setting up figure")
     gs_kw = dict(width_ratios=[1, 0.3], height_ratios=[1], wspace=0.01, hspace=0.3)
-    fig, axes = plt.subplots(1, 2, figsize=(17, 5), dpi=300, gridspec_kw=gs_kw, sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 5), dpi=300, gridspec_kw=gs_kw, sharey=True)
 
     bin_range = (-0.65, 0.65)
 
@@ -184,13 +205,19 @@ def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue
 
     # get x and y
     X, y = prep_x_y(acc, dist)
+    del acc
+    print(f"Done preparing x and y, with the following shapes: {X.shape}, {y.shape}")
+
 
     # permutation test to see if correlation is significant
     if not cluster:
+        print("Starting permutation test")
         corr, all_perm, pvals = permutation_test(X, y, n_perm)
+        print("Done with permutation test")
     else:
-        corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm, correlation=correlation)
-                
+        print("Starting cluster permutation test")
+        corr, all_perm, clusters, pvals_tmp = cluster_permutation_test_mne(X, y, n_perm, correlation=correlation, stratified_permutation=stratified_permutation)
+        print("Done with cluster permutation test")
         # reshape corr
         corr = corr.reshape(-1)
 
@@ -202,8 +229,6 @@ def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue
             sig_timepoints = np.concatenate([clusters[i][0] for i in sig_clusters_idx])
         except:
             sig_timepoints = []
-
-        print(sig_timepoints)
             
         # get pvals
         pvals = np.ones(X.shape[1])
@@ -214,6 +239,7 @@ def plot_corr_hist(acc, save_path = None, corr_color="C0", perm_color="lightblue
     for perm in all_perm:
         ax_corr.plot(perm, color=perm_color, linewidth=0.5, alpha=0.4)
 
+    print("Plotting correlation and histogram")
     # plot correlation
     plot_corr(ax_corr, corr, pvals, alpha = alpha, color=corr_color, y_lim=(-1, 1))
 
@@ -237,6 +263,8 @@ if __name__ == "__main__":
     # load accuracies from cross decoding
     acc = np.load(path.parents[0] / "accuracies" / f"cross_decoding_10_LDA_sens.npy", allow_pickle=True)
 
+    acc = acc[:7, :7, ...]
+
     # output path
     plot_path = path.parents[0] / "plots" 
 
@@ -246,14 +274,35 @@ if __name__ == "__main__":
     plot_corr_hist(
         acc = acc, 
         distance=distance,
-        save_path = plot_path / f"corr_acc_dist_{distance}.png",
+        save_path = plot_path / f"corr_acc_dist_{distance}_strat.png",
         alpha = alpha,
-        cluster=True)
-    
-    distance = "session"
+        cluster=True,
+        stratified_permutation=True
+        )
+
     plot_corr_hist(
         acc = acc, 
         distance=distance,
         save_path = plot_path / f"corr_acc_dist_{distance}.png",
         alpha = alpha,
         cluster=True)
+    
+
+    distance = "session"
+
+        
+    plot_corr_hist(
+        acc = acc, 
+        distance=distance,
+        save_path = plot_path / f"corr_acc_dist_{distance}_strat.png",
+        alpha = alpha,
+        cluster=True,
+        stratified_permutation=True
+        )
+
+    plot_corr_hist(
+        acc = acc, 
+        distance=distance,
+        save_path = plot_path / f"corr_acc_dist_{distance}.png",
+        alpha = alpha,
+        cluster=True)  
