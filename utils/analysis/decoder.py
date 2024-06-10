@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 
 class Decoder():
-    def __init__(self, alpha:str or float, ncv:int, model_type:str = "LDA", classification:bool = True, get_tgm:bool = True, verbose:bool = True):
+    def __init__(self, alpha:str or float, ncv:int, model_type:str = "LDA", classification:bool = True, get_tgm:bool = True, verbose:bool = True, return_betas:bool = False):
         """
         Parameters
         ----------
@@ -28,6 +28,7 @@ class Decoder():
         self.model_type = model_type
         self.get_tgm = get_tgm
         self.verbose = verbose
+        self.return_betas = return_betas
 
 
     def check_y_format(self,y):
@@ -73,6 +74,9 @@ class Decoder():
 
         scores = self.empty_accuracy_array(T)
 
+        if self.return_betas:
+            betas = np.zeros((T, C, self.ncv))
+
         for c in range(self.ncv):
             if self.verbose:
                 print('Cross validation: ', c+1, '/', self.ncv)
@@ -90,6 +94,14 @@ class Decoder():
                 model = self._return_pipeline()
 
                 model.fit(X_t, y_train)
+
+                # add beta values to betas array
+                if self.return_betas:
+                    if self.model_type == "LDA":
+                        betas[t, :, c] = model.named_steps['lineardiscriminantanalysis'].coef_
+                    elif self.model_type == "RidgeClassifier":
+                        betas[t, :, c] = model.named_steps['ridgeclassifier'].coef_
+
 
                 if self.get_tgm:
                     for t2 in range(T):
@@ -126,6 +138,9 @@ class Decoder():
 
         scores = self.empty_accuracy_array(T)
 
+        if self.return_betas:
+            betas = np.zeros((T, C, self.ncv))
+
         for c in range(self.ncv):
             if self.verbose:
                 print('Cross validation: ', c+1, '/', self.ncv)
@@ -147,6 +162,13 @@ class Decoder():
                 model = self._return_pipeline()
 
                 model.fit(X_t, y_train_tmp)
+
+                # add beta values to betas array
+                if self.return_betas:
+                    if self.model_type == "LDA":
+                        betas[t, :, c] = model.named_steps['lineardiscriminantanalysis'].coef_
+                    elif self.model_type == "RidgeClassifier":
+                        betas[t, :, c] = model.named_steps['ridgeclassifier'].coef_
 
                 if self.get_tgm:
                     for t2 in range(T):
