@@ -5,21 +5,22 @@ This script is used to decode both source and sensor space data using cross deco
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 import numpy as np
-import multiprocessing as mp
-from time import perf_counter
 import argparse
-from functools import partial
 from pathlib import Path
 
 # local imports
 import sys
 import pathlib
 sys.path.append(str(pathlib.Path(__file__).parents[2])) # adds the parent directory to the path so that the utils module can be imported
-
-from utils.data.concatenate import flip_sign, read_and_concate_sessions_source, read_and_concate_sessions
+print(str(pathlib.Path(__file__).parents[2]))
+from utils.data.concatenate import read_and_concate_sessions
 from utils.data.triggers import get_triggers_equal, convert_triggers_animate_inanimate, balance_class_weights
 from utils.data.prep_data import equalise_trials
-from utils.analysis.decoder import Decoder
+from tqdm import tqdm
+
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
 
 
 """ -------- DEFINE FUNCTIONS -------- """
@@ -28,27 +29,22 @@ def parse_args():
     parser = argparse.ArgumentParser(description='This script is used to decode both source and sensor space data using cross decoding.')
     parser.add_argument('--model_type', type=str, default='LDA', help='Model type. Can be either LDA or RidgeClassifier.')
     parser.add_argument('--parc', type=str, default='sens', help='Parcellation. Can be either aparc, aparc.a2009s, aparc.DKTatlas, HCPMMP1 or sens.')
-    parser.add_argument('--n_jobs', type=int, default=10, help='Number of cores to use.')
     parser.add_argument('--ncv', type=int, default=10, help='Number of cross validation folds.')
     parser.add_argument('--alpha', type=str, default='auto', help='Regularization parameter. Can be either auto or float.')
 
     args = parser.parse_args()
 
-    assert args.n_jobs <= mp.cpu_count(), f'Number of jobs ({args.n_jobs}) cannot be larger than number of available cores ({mp.cpu_count()})'
 
     return args
 
 
-def prep_data(sessions, triggers, parc, path, event_path):
+def prep_data(sessions, triggers):
     Xs, ys = [], []
 
     for sesh in sessions:
-        if parc == 'sens':
-            sesh = [f'{i}-epo.fif' for i in sesh] # WITH ICA noise components removed
-            X, y = read_and_concate_sessions(sesh, triggers)
-        else:
-            X, y = read_and_concate_sessions_source(path, event_path, sesh, triggers)
-        
+        sesh = [f'{i}-epo.fif' for i in sesh]
+        X, y = read_and_concate_sessions(sesh, triggers)
+
         # converting triggers to animate and inanimate instead of images
         y = convert_triggers_animate_inanimate(y) 
         
@@ -60,53 +56,61 @@ def prep_data(sessions, triggers, parc, path, event_path):
     
     return Xs, ys
 
-def get_accuracy(Xs:list, ys:list, decoder:Decoder, input:tuple):
+
+
+def create_cv_folds(Xs:list, ys:list, ncv:int, shuffle:bool = True):
     """
-    This function is used to decode both source and sensor space data using cross decoding.
+    creates a list of cross validation folds for each scanning day
 
     Parameters
     ----------
     Xs : list
-        list of X arrays
+        list of arrays with shape (T, N, C) where T is the number of time points, N is the number of trials and C is the number of sensors
     ys : list
-        list of y arrays
-    decoder : Decoder
-        Decoder object
-    input : tuple
-        tuple containing ind_train, ind_test and idx
-    
+        list of arrays with shape (N,) where N is the number of trials
+    ncv : int
+        number of cross validation folds
+    shuffle : bool, optional
+        shuffle the data before splitting, by default True
+
     Returns
     -------
-    (ind_train, ind_test, accuracy) : tuple
-        tuple containing ind_train, ind_test and accuracy
+    Xs_cv : list
+        list of lists of arrays with shape (T, N, C) where T is the number of time points, N is the number of trials and C is the number of sensors
+    ys_cv : list
+        list of lists of arrays with shape (N,) where N is the number of trials
     """
-    start = perf_counter()
+    Xs_cv = []
+    ys_cv = []
 
-    (ind_train, ind_test, idx) = input # unpacking input tuple
+    for X, y in zip(Xs, ys):
+        T, N, C = X.shape
+        inds = np.arange(N)
 
-    if ind_test == ind_train: # avoiding double dipping within session, by using within session decoder
-        accuracy = decoder.run_decoding(Xs[ind_train], ys[ind_train])
+        if shuffle:
+            np.random.shuffle(inds)
 
-    else: # using cross decoding
-        accuracy = decoder.run_decoding_across_sessions(Xs[ind_train], ys[ind_train], Xs[ind_test], ys[ind_test])
+        cv_folds = np.array_split(inds, ncv)
+
+        X_cv = [X[:, fold, :] for fold in cv_folds]
+        y_cv = [y[fold] for fold in cv_folds]
+
+        Xs_cv.append(X_cv)
+        ys_cv.append(y_cv)
+
+    return Xs_cv, ys_cv
     
-    end = perf_counter()
-
-    print(f'Finished decoding index {idx} in {round(end-start, 2)} seconds')
-
-    return ind_train, ind_test, accuracy
-
 
 def main():
     args = parse_args()
-    parc = args.parc
     ncv = args.ncv
+    alpha = args.alpha
 
     # defining paths
-    path = Path(__file__)
-    output_path = path / "accuracies" / f'cross_decoding_{ncv}_{args.model_type}_{parc}.npy'
-    data_path = path.parents[5] / 'final_data' / 'laurap' / 'source_space' / 'parcelled' / parc
-    event_path = path.parents[2] / 'info_files' / 'events'
+    path = Path(__file__).parent
+    output_path = path / "accuracies" / f'cross_decoding_{ncv}_{args.model_type}_sens.npy'
+    print(output_path)
+    output_path_betas = path / "betas" / f'cross_decoding_{ncv}_{args.model_type}_sens.npy'
 
     # define logger
     logger = logging.getLogger(__name__)
@@ -114,47 +118,76 @@ def main():
     # log info
     logger.info(f'Running cross decoding with the following parameters...')
     logger.info(f'Number of cross validation folds: {ncv}')
-    logger.info(f'Parcellation: {parc}')
 
-    sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38'], ['memory_01', 'memory_02'], ['memory_03', 'memory_04', 'memory_05', 'memory_06'],  ['memory_07', 'memory_08', 'memory_09', 'memory_10', 'memory_11'], ['memory_12', 'memory_13', 'memory_14', 'memory_15']]
+    sessions = [['visual_03', 'visual_04'], ['visual_05', 'visual_06', 'visual_07'], ['visual_08', 'visual_09', 'visual_10'], ['visual_11', 'visual_12', 'visual_13'],['visual_14', 'visual_15', 'visual_16', 'visual_17', 'visual_18', 'visual_19'],['visual_23', 'visual_24', 'visual_25', 'visual_26', 'visual_27', 'visual_28', 'visual_29'],['visual_30', 'visual_31', 'visual_32', 'visual_33', 'visual_34', 'visual_35', 'visual_36', 'visual_37', 'visual_38']]
 
     triggers = get_triggers_equal() # get triggers for equal number of trials per condition (27 animate and 27 inanimate)
     
     # reading and concatenating data
-    Xs, ys = prep_data(sessions, triggers, parc, data_path, event_path)
-    
-    # sign flipping for concatenated data (source space only)
-    if parc != 'sens': 
-        Xs = [flip_sign(Xs[0], X) for X in Xs]
+    Xs, ys = prep_data(sessions, triggers)
 
     # equalising number of trials
     Xs, ys = equalise_trials(Xs, ys)
 
-    # preparing decoding inputs for multiprocessing
-    decoding_inputs = [(train_sesh, test_sesh, idx*i+i) for idx, train_sesh in enumerate(range(len(Xs))) for i, test_sesh in enumerate(range(len(Xs)))]
+    Xs_cv, ys_cv = create_cv_folds(Xs, ys, ncv)
+
 
     # empty array to store accuracies in
-    accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0]), dtype=float)
-
-    # preparing the decoder
-    decoder = Decoder(classification=True, ncv = ncv, alpha = args.alpha, model_type = args.model_type, get_tgm=True)
-
-    # using partial to pass arguments to function that are not changing
-    multi_parse = partial(get_accuracy, Xs, ys, decoder)
-
-    with mp.Pool(args.n_jobs) as p:
-        for train_session, test_session, accuracy in p.map(multi_parse, decoding_inputs):
-            accuracies[train_session, test_session, :, :] = accuracy
+    accuracies = np.zeros((len(Xs), len(Xs), Xs[0].shape[0], Xs[0].shape[0], ncv), dtype=float)
     
-    p.close()
-    p.join()
+    # empty array to store betas in (number of scanning days, number of time points, number of sensors, cv folds)
+    betas = np.zeros((len(Xs), Xs[0].shape[0], Xs[0].shape[2], ncv), dtype=float)
+
+
+
+    for train_sesh in range(len(Xs_cv)):
+        logger.info(f'Training on session {train_sesh+1}')
+        for cv_test in tqdm(range(ncv), desc=f'cross-validation fold number'):
+            # get all the other indices for training than the one used for testing
+            train_inds = np.delete(np.arange(ncv), cv_test)
+
+            # get the training data by concatenating the data from the training indices 
+            X_train = np.concatenate([Xs_cv[train_sesh][i] for i in train_inds], axis=1)
+            y_train = np.concatenate([ys_cv[train_sesh][i] for i in train_inds])
+
+            # loop over time points
+            for t in range(X_train.shape[0]):
+                X_train_t = X_train[t, :, :]
+
+                model = make_pipeline(StandardScaler(), LDA(solver = 'lsqr', shrinkage = alpha))
+
+                # fit the model
+                model.fit(X_train_t, y_train)
+
+                # get the beta values
+                betas[train_sesh, t, :, cv_test] = model.named_steps['lineardiscriminantanalysis'].coef_
+
+
+                for test_sesh in range(len(Xs)):
+                    # get the testing data
+                    X_test = Xs_cv[test_sesh][cv_test]
+                    y_test = ys_cv[test_sesh][cv_test]
+
+                    # loop over time points
+                    for t2 in range(X_test.shape[0]):
+                        X_test_t = X_test[t2, :, :]
+
+                        # get the accuracy
+                        accuracy = model.score(X_test_t, y_test)
+
+                        accuracies[train_sesh, test_sesh, t, t2, cv_test] = accuracy
 
     # making sure output path exists
     if not output_path.parent.exists():
         output_path.parent.mkdir(parents=True)
+
+    if not output_path_betas.parent.exists():
+        output_path_betas.parent.mkdir(parents=True)
    
     # saving accuracies
     np.save(output_path, accuracies)
+    np.save(output_path_betas, betas)
+
     
 
 if __name__ == '__main__':
