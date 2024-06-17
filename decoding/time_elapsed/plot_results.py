@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 import pickle as pkl
 import pandas as pd
+from mne.stats import permutation_cluster_test
 
 # local imports
 import sys
@@ -173,8 +174,8 @@ def create_table(correlation_dict, timesample = 100):
 
     return df
 
-def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r"):    
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8), dpi=300)
+def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r", y_min = -0.2, y_max = 0.75):    
+    fig, ax = plt.subplots(1, 1, figsize=(10, 4), dpi=300)
 
     cmap = plt.colormaps[cmap]
     for i, (key, value) in enumerate(tgm_dict.items()):
@@ -186,13 +187,33 @@ def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r"):
             ax.plot(diagonal, label=key.capitalize(), color="k")
         else:
             # colour by the correlation between y_true and y_permutation
-            ax.plot(diagonal, color= "forestgreen", alpha=0.5, linewidth=0.5, label = f"Permuted labels")
+            ax.plot(diagonal, color= "forestgreen", alpha=0.5, linewidth=0.5, label = f"Permuted")
 
     # legend (but only with one permuted label)
     handles, labels = ax.get_legend_handles_labels()
     unique_labels = list(set(labels))
     unique_handles = [handles[labels.index(label)] for label in unique_labels]
     ax.legend(unique_handles, unique_labels)
+
+    # make a permutation test to see if the correlation between the predicted and true values is significantly different from the permuted values
+    # calculate p-value
+    permuted = [np.diag(value["tgm"]) for key, value in tgm_dict.items() if type(key) != str]
+    permutations_corr = np.array(permuted)
+
+
+    # original
+    original = np.diag(tgm_dict["original"]["tgm"]).reshape(1, -1)
+
+    T_obs, clusters, cluster_p_values, H0 = permutation_cluster_test(
+        [original, permutations_corr],
+        n_permutations=1000, 
+        threshold=0.05)
+    
+    # plot significant clusters as stars at the bottom of the plot
+    for i_c, c in enumerate(clusters):
+        c = c[0]
+        if cluster_p_values[i_c] < 0.05:
+            ax.plot(c, np.ones_like(c)*-0.15, color="grey", linewidth=2, alpha = 0.5)
 
     # plot the colourbar
     #sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=1))
@@ -203,9 +224,13 @@ def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r"):
     #cbar.set_label("Correlation between true y and permuted y", rotation=-90, va="bottom")
 
     ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Correlation between predicted and true values")
+    ax.set_ylabel("Correlation (predicted and true)")
 
-    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ], size = 7)
+    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+
+    ax.set_ylim(y_min, y_max)
+    ax.set_xlim(0, 250)
+
             
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')

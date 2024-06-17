@@ -5,7 +5,6 @@ import json
 import itertools
 from scipy.stats import spearmanr
 import pickle
-from multiprocessing import Pool
 
 # local imports
 import sys
@@ -80,7 +79,7 @@ def get_triggers(trial_type:str = "animate"):
 def run_permutation(args):
     permute_session_days, session_days, sessions, triggers, args_ncv = args
     X, y = prepare_data((sessions, permute_session_days, triggers))
-    pred, true = tgm_ridge_scores(X, y, cv=5, ncv=args_ncv)
+    pred, true = tgm_ridge_scores(X, y, cv=5, ncv=args_ncv, return_betas=False)
     return {
         "permuted_session_days": permute_session_days,
         "true_session_days": session_days,
@@ -106,19 +105,6 @@ if __name__ == '__main__':
         sessions = sessions[:4] + sessions[8:]
         session_days = session_days[:4] + session_days[8:]
 
-    elif args.task == 'visualsubset':
-        # only take the first 4 visual sessions
-        sessions = sessions[:4]
-        session_days = session_days[:4]
-
-    elif args.task == 'visualsubset_easy':
-        # take session with the following indices: 0, 3, 8, 10
-        sessions = [sessions[i] for i in [0, 3, 8, 10]]
-        session_days = [session_days[i] for i in [0, 3, 8, 10]]
-    
-    elif args.task == 'memory':
-        sessions = sessions[4:8]
-        session_days = session_days[4:8]
     
     else: 
         raise ValueError("Task must be either visual, visualsubset, visualsubset_easy or memory.")
@@ -139,22 +125,25 @@ if __name__ == '__main__':
     corr = [spearman_correlations[i] for i in indices[:args.nperms]]
 
     output = {}
-
-    args_list = [(permute_session_days, session_days, sessions, triggers, args.ncv) for permute_session_days in permutations]
     
-    # Using multiprocessing to parallelize
-    with Pool(1) as p:
-        results = p.map(run_permutation, args_list)
-
-    for i, res in enumerate(results):
-        output[i+1] = res
+    for i, permute_session_days in enumerate(permutations):
+        X, y = prepare_data((sessions, permute_session_days, triggers))
+        pred, true = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv, return_betas=False)
+        output[f"permuted_{i}"] = {
+            "permuted_session_days": permute_session_days,
+            "true_session_days": session_days,
+            "correlation": corr[i],
+            "predicted": pred, 
+            "true": true
+        }
 
     # also run the original data
     X, y = prepare_data((sessions, session_days, triggers))
-    pred, true = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv)
+    pred, true, betas = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv, return_betas = True)
     output["original"] = {
         "predicted": pred, 
-        "true": true
+        "true": true,
+        "betas": betas
     }
 
     with open(output_path, 'wb') as f:

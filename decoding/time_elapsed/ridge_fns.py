@@ -55,7 +55,7 @@ def fit_ridge_clf(X, y, alphas:list, ncv = 10):
 
 
 
-def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, logger = None):
+def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, logger = None, return_betas = False):
     """
     Fits the ridge classifier to the data and applies it to all timepoints.
 
@@ -83,7 +83,7 @@ def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, lo
         Matrix of true values, shape (n_timepoints, n_timepoints, n_stratification_groups, n_trials).
     """
     # get the number of timepoints
-    n_timepoints = X.shape[0]
+    n_timepoints, n_trials, n_features = X.shape
 
     folds = KFold(n_splits=cv, shuffle=True)
 
@@ -103,6 +103,10 @@ def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, lo
     X = X[:, idx, :]
     y = y[idx]
 
+    if return_betas:
+        betas = np.zeros((n_timepoints, n_features, ncv))
+    else:
+        betas = None
 
     # loop over the timepoints
     for i in range(n_timepoints):
@@ -120,6 +124,11 @@ def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, lo
 
             # fit the classifier
             clf = fit_ridge_clf(X_train, y_train, alphas = alphas, ncv = ncv)
+
+
+            if return_betas:
+                betas[i, :, s] = clf.coef_
+                
 
             # test the classifier on all timepoint
             for j in range(n_timepoints):
@@ -140,5 +149,8 @@ def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, lo
                     if np.all(pred == pred[0]):
                         logger.info(f'All predictions for train timepoint {i} and test timepoint {j} (cv fold {s}) are the same.')
 
+    if return_betas:
+        return predictions, true_values, betas
                 
-    return predictions, true_values
+    else:
+        predictions, true_values
