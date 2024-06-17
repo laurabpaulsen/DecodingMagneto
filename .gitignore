@@ -152,3 +152,4 @@ trash/
 *permutation_results*
 
 decoding/time_elapsed/plots/extra/*
+decoding/cross_decoding/DecodingMagneto.code-workspace
