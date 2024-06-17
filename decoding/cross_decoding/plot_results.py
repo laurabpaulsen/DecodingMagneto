@@ -93,11 +93,6 @@ def plot_cross_decoding_matrix(acc, save_path = None):
             axs[i, j].set_xticks([])
             axs[i, j].set_yticks([])
 
-    
-    # add colour bar
-    #colour_loc = axs[1, 0].images[0]
-    #cb = plt.colorbar(colour_loc, ax = axs[1, -1], location = 'right')
-    #cb.ax.set_ylabel('Accuracy (%)')
 
     for ax in axs[:, -1]:
         # remove x ticks
@@ -126,217 +121,11 @@ def plot_cross_decoding_matrix(acc, save_path = None):
 
 
 
-def plot_sig_clusters(ax, array_name):
-    # add significant clusters to plot as contour
-    cluster_array = np.load(f'permutation/sens_sig_clusters_{array_name}.npy', allow_pickle=True)
-
-    # plot contour where value is 1
-    ax.contour(cluster_array, levels = [0.5], colors = "k", linewidths = 0.3, alpha = 0.7)
-
-    # somehow ax.contour messes with the axis, so we need to reset it
-    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-
-    return ax
-
-
 def add_dif_label(ax, label, colour = 'red'):
     ax.text(-0.02, 1.05, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
 
 def add_tgm_label(ax, label, colour = 'black'):
     ax.text(-0.05, 1.05, label, transform=ax.transAxes, fontsize=20, fontweight='bold', va='top', ha='right', color = colour, alpha = 0.7)
-
-def plot_train_test_condition_new(acc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
-    fig, axs = plt.subplots(3, 3, figsize = (14, 12), dpi = 300, gridspec_kw={'height_ratios': [1, 1, 0.20]})
-    
-    vis = np.array([0, 1, 2, 3, 4, 5, 6])
-    mem = np.array([7, 8, 9, 10])
-    
-    n_trials_vis = 588 * len(vis)
-    n_trials_mem = 588 * len(mem)
-
-    vmin_diff = -5
-    vmax_diff = 5
-    
-    # VIS VIS
-    vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
-
-    plot.plot_tgm_ax(vis_vis, ax=axs[0, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='visual -> visual')
-    add_diagonal_line(axs[0, 0], colour = "grey")
-
-    # MEM VIS
-    mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
-    plot.plot_tgm_ax(mem_vis, ax=axs[0, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='memory -> visual')
-    add_diagonal_line(axs[0, 1], colour = "grey")
-
-    # MEM MEM
-    mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
-    plot.plot_tgm_ax(mem_mem, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="memory -> memory")
-    add_diagonal_line(axs[1, 0], colour = "grey")
-
-    # VIS MEM
-    vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
-    plot.plot_tgm_ax(vis_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'visual -> memory')
-    add_diagonal_line(axs[1, 1], colour = "grey")
-    
-
-    ### DIFFERENCE PLOTS ###
-    colour_map_diff = "PuOr_r" # sns.diverging_palette(220, 20, s = 70, l = 70, as_cmap=True)
-
-    # difference between vis_vis and mem_vis
-    plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff, title = '(visual -> visual) \n - (memory -> visual)')
-    plot_sig_clusters(axs[0, 2], "visvis_memvis")
-
-    # difference between vis_mem and mem_mem
-    plot.plot_tgm_ax(mem_mem - vis_mem, ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff, title = '(memory -> memory) \n - (visual -> memory)')
-    plot_sig_clusters(axs[1, 2], "vismem_memmem")
-
-    if sig_inds:
-        for ax in [axs[0, 2], axs[1, 2]]:
-            for ind in sig_inds:
-                ax.add_patch(plt.Rectangle((ind[0], ind[0]), ind[1]-ind[0], ind[1]-ind[0], fill = False, edgecolor = 'black', linewidth = 1))
-            
-
-
-    for ax in [axs[1,2], axs[0, 2]]:
-        x_axis_seconds(ax)
-        change_spine_colour(ax, diff_colour)
-        add_diagonal_line(ax, colour = diff_colour)
-
-    #plot colourbars in the first two columns of the first row
-    colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
-    labels = ['Accuracy (%)', 'Difference (%)']
-    for i, ax in enumerate(axs[-1, 1:3]):
-        # remove the axis
-        ax.axis('off')
-        # add colourbar
-        cb = plt.colorbar(colour_loc[i], ax = ax, orientation = 'horizontal', pad = 0.9, shrink = 0.8)
-        cb.ax.set_title(labels[i])
-
-        if i == 1:
-            change_spine_colour(cb.ax, diff_colour)
-
-    # for all the bottom plots
-    #for ax in axs[-1, :]:
-    #    ax.set_xlabel('Test time (s)')
-    #for ax in axs[:, 0]:
-    #    ax.set_ylabel('TRAIN TIME (s)', fontsize=14)
-
-    for ax in axs.flatten():
-        ax.set_xlabel('Test time (s)')
-        ax.set_ylabel('Train time (s)')
-
-    # remove last axis
-    axs[-1, 0].axis('off')
-
-    # add space between plots
-    plt.tight_layout(h_pad = 3)
-
-    plt.savefig(os.path.join('plots', f'cross_decoding_average_vis_mem_new.png'))
-    plt.close()
-
-
-
-
-def plot_train_test_condition(acc, vmin = 40, vmax = 60, diff_colour = 'darkblue', sig_inds = None):
-    fig, axs = plt.subplots(4, 3, figsize = (12, 12*4/3), dpi = 300)
-    
-    vis = np.array([0, 1, 2, 3, 4, 5, 6])
-    mem = np.array([7, 8, 9, 10])
-    
-    n_trials_vis = 588 * len(vis)
-    n_trials_mem = 588 * len(mem)
-
-    vmin_diff = -5
-    vmax_diff = 5
-    
-    # VIS VIS
-    vis_vis = np.nanmean(acc[vis,:, :, :][:, vis, :, :], axis = (0, 1))
-
-    axs[1, 0] = plot.plot_tgm_ax(vis_vis, ax=axs[1, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title ='train: vis,  test:vis'.upper())
-    axs[1,0].text(-0.1, 1.1, 'A', transform=axs[1,0].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
-    add_diagonal_line(axs[1, 0], colour = "grey")
-
-    # MEM MEM
-    mem_mem = np.nanmean(acc[mem,:, :, :][:, mem, :, :], axis = (0, 1))
-    axs[1, 1] = plot.plot_tgm_ax(mem_mem, ax=axs[1, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem, alpha = alpha, p = 0.5), title="train:mem, test:mem".upper())
-    axs[1,1].text(-0.1, 1.1, 'B', transform=axs[1,1].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
-    add_diagonal_line(axs[1, 1], colour = "grey")
-
-    # VIS MEM
-    vis_mem = acc[vis,:, :, :][:, mem, :, :].mean(axis = (0, 1))
-    axs[2, 0] = plot.plot_tgm_ax(vis_mem, ax=axs[2, 0], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_mem,alpha = alpha, p = 0.5), title = 'train:vis, test:mem'.upper())
-    axs[2,0].text(-0.1, 1.1, 'C', transform=axs[2,0].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
-    add_diagonal_line(axs[2, 0], colour = "grey")
-    
-
-    # MEM VIS
-    mem_vis = acc[mem, :, :, :][:, vis, :, :].mean(axis = (0, 1))
-    axs[2, 1] = plot.plot_tgm_ax(mem_vis, ax=axs[2, 1], vmin=vmin, vmax=vmax, chance_level=chance_level(n_trials_vis, alpha = alpha, p = 0.5), title='train:mem, test:vis'.upper())
-    axs[2,1].text(-0.1, 1.1, 'D', transform=axs[2,1].transAxes, fontsize=20, fontweight='bold', va='top', ha='right')
-    add_diagonal_line(axs[2, 1], colour = "grey")
-
-    ### DIFFERENCE PLOTS ###
-    colour_map_diff = "PuOr_r" # sns.diverging_palette(220, 20, s = 70, l = 70, as_cmap=True)
-    # difference between test and train condition (vis - mem)
-    axs[1, 2] = plot.plot_tgm_ax(np.array(vis_vis - mem_mem), ax=axs[1, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    plot_sig_clusters(axs[1, 2], "visvis_memmem")
-    add_dif_label(axs[1, 2], 'A-B', colour = diff_colour)
-
-    # difference between test and train condition
-    axs[2, 2] = plot.plot_tgm_ax(vis_mem - mem_vis, ax=axs[2, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    axs[2, 2]= plot_sig_clusters(axs[2, 2], "vismem_memvis")
-    add_dif_label(axs[2, 2], 'C-D', colour = diff_colour)
-
-    # difference between vis_vis and vis_mem
-    axs[3, 0] = plot.plot_tgm_ax(vis_vis - vis_mem, ax=axs[3, 0], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    plot_sig_clusters(axs[3, 0], "visvis_vismem")
-    add_dif_label(axs[3, 0], 'A-C', colour = diff_colour)
-
-    # difference between mem_mem and mem_vis
-    axs[3, 1] = plot.plot_tgm_ax(mem_mem - mem_vis, ax=axs[3, 1], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    axs[3, 1] = plot_sig_clusters(axs[3, 1], "memmem_memvis")
-    add_dif_label(axs[3, 1], 'B-D', colour = diff_colour)
-
-    # difference between vis_vis and mem_vis
-    axs[3, 2] = plot.plot_tgm_ax(vis_vis - mem_vis, ax=axs[3, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    axs[3, 2] = plot_sig_clusters(axs[3, 2], "visvis_memvis")
-    add_dif_label(axs[3, 2], 'A-D', colour = diff_colour)
-
-    # difference between vis_mem and mem_mem
-    axs[0, 2] = plot.plot_tgm_ax(vis_mem - mem_mem, ax=axs[0, 2], vmin=vmin_diff, vmax=vmax_diff, cmap = colour_map_diff)
-    axs[0, 2] =plot_sig_clusters(axs[0, 2], "vismem_memmem")
-    add_dif_label(axs[0, 2], 'C-B', colour = diff_colour)
-
-
-    for ax in axs[[2, 3, 3, 3, 1, 3, 0], [2, 2, 0, 1, 2, 2, 2]].flatten(): # difference plots
-        x_axis_seconds(ax)
-        change_spine_colour(ax, diff_colour)
-        add_diagonal_line(ax, colour = diff_colour)
-
-        if sig_inds:
-            for ind in sig_inds:
-                ax.add_patch(plt.Rectangle((ind[0], ind[0]), ind[1]-ind[0], ind[1]-ind[0], fill = False, edgecolor = 'black', linewidth = 1))
-
-    # plot colourbars in the first two columns of the first row
-    colour_loc = [axs[1, 0].images[0], axs[1, 2].images[0]]
-    labels = ['ACCURACY (%)', 'DIFFERENCE (%)']
-    for i, ax in enumerate(axs[0, :2]):
-        # remove the axis
-        ax.axis('off')
-        # add colourbar
-        cb = plt.colorbar(colour_loc[i], ax = ax, orientation = 'horizontal', pad = 0.9, shrink = 0.8, location = "bottom")
-        cb.ax.set_title(labels[i], fontsize = 14)
-
-        if i == 1:
-            change_spine_colour(cb.ax, diff_colour)
-
-    axs[2,0].set_ylabel('TRAIN TIME (s)', fontsize=14)
-    axs[-1,1].set_xlabel('TEST TIME (s)', fontsize=14)
-
-    plt.tight_layout()
-    plt.savefig(os.path.join('plots', f'cross_decoding_average_vis_mem.png'))
-    plt.close()
 
 
 def cross_diags_average_sesh(accuracies, SE=False, save_path=None, title=None):
@@ -579,8 +368,9 @@ def main_plot_generator():
     # read in results
     accuracies = np.load(os.path.join('accuracies', f'cross_decoding_10_LDA_sens.npy'), allow_pickle=True)
 
-    # only get visual sessions
-    accuracies = accuracies[:7, :7, :, :]
+    # average over the last dimension (cv folds)
+    accuracies = np.mean(accuracies, axis = -1)
+
 
     accuracies_within = np.diagonal(accuracies, axis1=0, axis2=1)
 
