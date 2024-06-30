@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.linear_model import RidgeCV, ElasticNetCV
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
+from joblib import parallel_backend
 from sklearn.model_selection import KFold
 
 import logging
@@ -24,7 +25,7 @@ def get_logger(filename):
     return logger
  
 
-def fit_ridge_clf(X, y, alphas:list, ncv = 10):
+def fit_ridge_clf(X, y, alphas:list, ncv = 10, n_jobs = 1):
     """
     Fits the ridge classifier to the data.
     
@@ -38,18 +39,20 @@ def fit_ridge_clf(X, y, alphas:list, ncv = 10):
         List of alpha values to try.
     ncv : int
         Number of cross validation folds to use when fitting the classifier.
+    n_jobs : int
+        Number of jobs to run in parallel. Default is 5.
     
     Returns
     -------
     clf : sklearn.linear_model.Ridge
         Fitted ridge classifier.
     """
+    with parallel_backend('threading', n_jobs=n_jobs):
+        # create the classifier
+        clf = RidgeCV(alphas = alphas, cv = ncv)
 
-    # create the classifier
-    clf = RidgeCV(alphas = alphas, cv = ncv)
-
-    # fit the classifier
-    clf.fit(X, y)
+        # fit the classifier
+        clf.fit(X, y)
 
     return clf
 
@@ -109,7 +112,7 @@ def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, lo
         betas = None
 
     # loop over the timepoints
-    for i in range(n_timepoints):
+    for i in tqdm(range(n_timepoints)):
         # loop over k-folds
         for s, (train_idx, test_idx) in enumerate(folds.split(X[i, :, :])):
             # get the training and testing data
@@ -153,4 +156,4 @@ def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, lo
         return predictions, true_values, betas
                 
     else:
-        predictions, true_values
+        return predictions, true_values

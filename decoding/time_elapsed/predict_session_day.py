@@ -5,6 +5,7 @@ import json
 import itertools
 from scipy.stats import spearmanr
 import pickle
+from tqdm import tqdm
 
 # local imports
 import sys
@@ -60,6 +61,8 @@ def prepare_data(args):
             Xs = np.concatenate((Xs, X), axis=1)
             ys = np.concatenate((ys, y), axis=0)
 
+        
+
     # balance class weights
     X, y = balance_class_weights_multiple(Xs, ys)
 
@@ -76,17 +79,6 @@ def get_triggers(trial_type:str = "animate"):
 
     return triggers
 
-def run_permutation(args):
-    permute_session_days, session_days, sessions, triggers, args_ncv = args
-    X, y = prepare_data((sessions, permute_session_days, triggers))
-    pred, true = tgm_ridge_scores(X, y, cv=5, ncv=args_ncv, return_betas=False)
-    return {
-        "permuted_session_days": permute_session_days,
-        "true_session_days": session_days,
-        "correlation": spearmanr(session_days, permute_session_days).correlation,
-        "predicted": pred, 
-        "true": true
-    }
 
 if __name__ == '__main__':
     args = parse_args()
@@ -115,6 +107,7 @@ if __name__ == '__main__':
     # make a list of all possible permutations of the session list
     session_list_permutations = list(itertools.permutations(session_days))
 
+
     # take the permutations most different from the original session list (spearman correlation between original and permuted) closest to 0
     spearman_correlations = [spearmanr(session_days, i).correlation for i in session_list_permutations]
 
@@ -124,27 +117,41 @@ if __name__ == '__main__':
     permutations = [session_list_permutations[i] for i in indices[:args.nperms]]
     corr = [spearman_correlations[i] for i in indices[:args.nperms]]
 
-    output = {}
-    
+    # run the original data
+    X, y = prepare_data((sessions, session_days, triggers))
+    pred, true, betas = tgm_ridge_scores(X, y, cv=5, ncv=5, return_betas = True)
+    output = {
+        "original": {
+            "predicted": pred, 
+            "true": true,
+            "betas": betas
+        }
+    }
+
+    # write the original data results to the file
+    with open(output_path, 'ab') as f:
+        pickle.dump(output, f)
+
+    del output, X, y, pred, true, betas
+
+    # run permutations
     for i, permute_session_days in enumerate(permutations):
         X, y = prepare_data((sessions, permute_session_days, triggers))
         pred, true = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv, return_betas=False)
-        output[f"permuted_{i}"] = {
-            "permuted_session_days": permute_session_days,
-            "true_session_days": session_days,
-            "correlation": corr[i],
-            "predicted": pred, 
-            "true": true
-        }
+        output = {
+            f"permuted_{i}": {
+                "permuted_session_days": permute_session_days,
+                "true_session_days": session_days,
+                "correlation": corr[i],
+                "predicted": pred, 
+                "true": true
+                }
+            }
+        
+        with open(output_path, 'ab') as f:
+            pickle.dump(output, f)
 
-    # also run the original data
-    X, y = prepare_data((sessions, session_days, triggers))
-    pred, true, betas = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv, return_betas = True)
-    output["original"] = {
-        "predicted": pred, 
-        "true": true,
-        "betas": betas
-    }
+        del output, X, y, pred, true
 
-    with open(output_path, 'wb') as f:
-        pickle.dump(output, f)
+
+    

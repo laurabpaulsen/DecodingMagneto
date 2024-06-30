@@ -70,12 +70,22 @@ def get_correlation_tgm(predicted, true):
 
 def prepare_dicts(results_path):
 
-    results = pkl.load(open(results_path, "rb"))
+    results = {}
+   
+    with open(results_path, 'rb') as fr:
+        try:
+            while True:
+                tmp_data = pkl.load(fr)
+                key = list(tmp_data.keys())[0]
+                value = tmp_data[key]
 
-            
-    # loop over the results and permuted results
-    output = {}
-    
+                results[key] = value
+
+        except EOFError:
+            pass
+
+    output = {}     
+    # loop over the results and permuted results    
     for key, value in results.items():
         if key == "original":
             permutation = "original"
@@ -124,7 +134,7 @@ def plot_results(tgm_dict, save_path=None, cmap="RdBu_r", min_val=-1, max_val=1)
     for key, value in tgm_dict.items():
         tgm = value["tgm"]
 
-        if type(key) == str:
+        if key == "original":
             ax = ax_original
             ax.set_title(key.capitalize())
             colourbar = True
@@ -183,7 +193,7 @@ def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r", y_min = -
         diagonal = np.diag(tgm)
         corr_y_true_y = value["corr_permutation_y_true_y"]
 
-        if type(key) == str:
+        if key == "original":
             ax.plot(diagonal, label=key.capitalize(), color="k")
         else:
             # colour by the correlation between y_true and y_permutation
@@ -197,9 +207,8 @@ def plot_results_diagonals(tgm_dict, save_path=None, cmap="viridis_r", y_min = -
 
     # make a permutation test to see if the correlation between the predicted and true values is significantly different from the permuted values
     # calculate p-value
-    permuted = [np.diag(value["tgm"]) for key, value in tgm_dict.items() if type(key) != str]
+    permuted = [np.diag(value["tgm"]) for key, value in tgm_dict.items() if type(key) != "original"]
     permutations_corr = np.array(permuted)
-
 
     # original
     original = np.diag(tgm_dict["original"]["tgm"]).reshape(1, -1)

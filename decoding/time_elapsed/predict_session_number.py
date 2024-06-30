@@ -11,6 +11,7 @@ sys.path.append(str(Path(__file__).parents[2])) # adds the parent directory to t
 from utils.data.concatenate import read_and_concate_sessions
 from utils.data.triggers import balance_class_weights_multiple
 from ridge_fns import tgm_ridge_scores
+from tqdm import tqdm
 
 def parse_args():
     parser = ap.ArgumentParser()
@@ -135,29 +136,39 @@ if __name__ == '__main__':
     
     permutations = [session_list_permutations[i] for i in indices[:args.nperms]]
     corr = [spearman_correlations[i] for i in indices[:args.nperms]]
-
-    output = {}
-
-    args_list = [(permute_session_days, session_days, sessions, triggers, args.ncv) for permute_session_days in permutations]
     
-    for i, permute_session_days in enumerate(permutations):
+    
+    for i, permute_session_days in tqdm(enumerate(permutations), desc="Running permutations"):
         X, y = prepare_data((sessions, permute_session_days, triggers))
         pred, true = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv, return_betas=False)
-        output[f"permuted_{i}"] = {
-            "permuted_session_days": permute_session_days,
-            "true_session_days": session_days,
-            "correlation": corr[i],
-            "predicted": pred, 
-            "true": true
+        output = {
+            f"permuted_{i}": {
+                "permuted_session_days": permute_session_days,
+                "true_session_days": session_days,
+                "correlation": corr[i],
+                "predicted": pred, 
+                "true": true
+            }
         }
+
+        with open(output_path, 'ab') as f:
+            pickle.dump(output, f)
+            f.close()
+
+        del output, X, y, pred, true
 
     # also run the original data
     X, y = prepare_data((sessions, session_days, triggers))
-    pred, true, betas = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv, return_betas=True)
-    output["original"] = {
-        "predicted": pred, 
-        "true": true
+    pred, true, betas = tgm_ridge_scores(X, y, cv=5, ncv=args.ncv, return_betas = True)
+    output = {
+        "original": {
+            "predicted": pred, 
+            "true": true,
+            "betas": betas
+        }
     }
 
-    with open(output_path, 'wb') as f:
+    # Write the original data results to the file
+    with open(output_path, 'ab') as f:
         pickle.dump(output, f)
+        f.close()
