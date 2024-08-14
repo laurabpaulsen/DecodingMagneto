@@ -29,7 +29,11 @@ def x_axis_seconds(ax):
     """
     Changes the x axis to seconds
     """
-    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    range_seconds = np.arange(0, 251, step=50)
+    labels_range = [0. , 0.2, 0.4, 0.6, 0.8, 1. ]
+
+    ax.set_xticks(range_seconds)
+    ax.set_xticklabels(labels_range)
 
 def get_distance_matrix(order):
     # number of sessions
@@ -171,7 +175,7 @@ def cluster_permutation_test_mne(X, y, n_perm, correlation=pearsonr, stratified_
     T_obs, clusters, cluster_p_values, H0 = permutation_cluster_test(
         [corrs, permutations_corr], 
         n_permutations=n_perm, 
-        threshold=0.05)
+        threshold=0.001)
     
     return corrs, permutations_corr, clusters, cluster_p_values
 
@@ -265,20 +269,23 @@ if __name__ == "__main__":
 
     acc = acc[:7, :7, ...]
 
+    # take average over cv folds (last dimension)
+    acc = np.mean(acc, axis=-1)
+
     # output path
     plot_path = path.parents[0] / "plots" 
 
     alpha = 0.05
 
     distance = "days"
-    plot_corr_hist(
-        acc = acc, 
-        distance=distance,
-        save_path = plot_path / f"corr_acc_dist_{distance}_strat.png",
-        alpha = alpha,
-        cluster=True,
-        stratified_permutation=True
-        )
+    #plot_corr_hist(
+    #    acc = acc, 
+    #    distance=distance,
+    #    save_path = plot_path / f"corr_acc_dist_{distance}_strat.png",
+    #    alpha = alpha,
+    #    cluster=True,
+    #    stratified_permutation=True
+    #    )
 
     plot_corr_hist(
         acc = acc, 
@@ -291,14 +298,14 @@ if __name__ == "__main__":
     distance = "session"
 
         
-    plot_corr_hist(
-        acc = acc, 
-        distance=distance,
-        save_path = plot_path / f"corr_acc_dist_{distance}_strat.png",
-        alpha = alpha,
-        cluster=True,
-        stratified_permutation=True
-        )
+    #plot_corr_hist(
+    #    acc = acc, 
+    #    distance=distance,
+    #    save_path = plot_path / f"corr_acc_dist_{distance}_strat.png",
+    #    alpha = alpha,
+    #    cluster=True,
+    #    stratified_permutation=True
+    #    )
 
     plot_corr_hist(
         acc = acc, 
