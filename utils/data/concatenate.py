@@ -61,7 +61,7 @@ def read_and_concate_sessions(session_files, trigger_list):
     y : concatenated labels from sessions
     """
     for i in session_files:
-        epochs = mne.read_epochs(f'/media/8.1/final_data/laurap/epochs/{i}')
+        epochs = mne.read_epochs(f'/media/8.1/laurap/final_data/epochs/{i}')
         if i == session_files[0]:
             y = epochs.events[:, 2]
             idx = [i for i, x in enumerate(y) if x in trigger_list]
