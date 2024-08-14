@@ -2,7 +2,7 @@
 Functions for ridge regression used in predict_session_day.py, predict_trial_number.py, and predict_session_number.py.
 """
 import numpy as np
-from sklearn.linear_model import RidgeCV, ElasticNetCV
+from sklearn.linear_model import RidgeCV, Ridge
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 from joblib import parallel_backend
@@ -49,7 +49,11 @@ def fit_ridge_clf(X, y, alphas:list, ncv = 10, n_jobs = 1):
     """
     with parallel_backend('threading', n_jobs=n_jobs):
         # create the classifier
-        clf = RidgeCV(alphas = alphas, cv = ncv)
+        if len(alphas) == 1:
+            clf = Ridge(alpha = alphas[0])
+        
+        else:
+            clf = RidgeCV(alphas = alphas, cv = ncv)
 
         # fit the classifier
         clf.fit(X, y)
@@ -107,7 +111,7 @@ def tgm_ridge_scores(X, y, cv = 10, alphas = np.logspace(0, 2, 10), ncv = 10, lo
     y = y[idx]
 
     if return_betas:
-        betas = np.zeros((n_timepoints, n_features, ncv))
+        betas = np.zeros((n_timepoints, n_features, cv))
     else:
         betas = None
 
