@@ -17,6 +17,14 @@ plt.rcParams['legend.title_fontsize'] = 16
 plt.rcParams['figure.titlesize'] = 20
 plt.rcParams['figure.dpi'] = 300
 
+def set_ticks_xy(ax):
+    ax.set_xticks(np.arange(0, 251, step=50))
+    ax.set_xticklabels([0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax.set_yticks(np.arange(0, 251, step=50))
+    ax.set_yticklabels([0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    
+    return ax
+
 
 def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = False, title = None, cmap = 'RdBu_r'):
     """
@@ -46,8 +54,7 @@ def plot_tgm_ax(X, ax, vmin = 30, vmax = 70, chance_level = None, colour_bar = F
     if chance_level is not None:
         ax.contour(X*100, levels=[chance_level*100], colors='gray', alpha = 0.5, linewidths=0.5)
 
-    ax.set_yticks(np.arange(0, 252, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-    ax.set_xticks(np.arange(0, 252, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax = set_ticks_xy(ax)
     
     if colour_bar:
         cb = plt.colorbar(im, ax = ax, location = 'top', shrink = 0.5)
@@ -71,8 +78,7 @@ def plot_tgm_fig(X, vmin = 30, vmax = 70, savepath = None, chance_level = None, 
         plt.contour(X*100, levels=[chance_level*100], colors='k', alpha = 0.5, linewidths=linewitdh)
 
 
-    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax = set_ticks_xy(ax)
 
     cb = plt.colorbar(im, ax = ax, location = cbar_loc, shrink = 0.5)
     cb.set_label(label = 'Accuracy (%)')
