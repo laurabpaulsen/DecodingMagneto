@@ -67,14 +67,15 @@ def x_axis_seconds(ax):
     """
     Changes the x axis to seconds
     """
-    ax.set_xticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
+    ax.set_xticks(np.arange(0, 251, step=50))
+    ax.set_xticklabels([0, 0.2, 0.4, 0.6, 0.8, 1])
 
 def y_axis_percent(ax):
     """
     Changes the y axis seconds
     """
-    ax.set_yticks(np.arange(0, 251, step=50), [0. , 0.2, 0.4, 0.6, 0.8, 1. ])
-
+    ax.set_yticks(np.arange(0, 101, step=20))
+    ax.set_yticklabels([0, 20, 40, 60, 80, 100])
 def plot_cross_decoding_matrix(acc, save_path = None):
     fig, axs = plt.subplots(acc.shape[0], acc.shape[1], figsize = (12, 12))
     
@@ -422,7 +423,7 @@ def main_plot_generator():
 
     # plot the difference between within and cross session pairs
     difference = avg - avg_within
-    plt = plot.plot_tgm_fig(difference, vmin=-6, vmax=6, cmap = "PuOr_r", cbar_loc='right')
+    plt = plot.plot_tgm_fig(difference, vmin=-4, vmax=4, cmap = "PuOr_r", cbar_loc='right')
 
     plt.savefig(os.path.join('plots', f'difference_decoding_average.png'))
 
